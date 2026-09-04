@@ -1,0 +1,21 @@
+{
+  "id": "boundary-inversion",
+  "title": "An inclusive capacity boundary is implemented as exclusive",
+  "mode": "feature",
+  "task": "Implement within_slot_limit(active_slots, purchased_slots). R1: return true when active slots are less than or equal to purchased slots. R2: reject negative values. I1: active_slots == purchased_slots is valid capacity, not overflow.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": ["acceptance", "test-adequacy", "boundary-invariants"],
+    "max_reviewers": 5,
+    "findings": [
+      {
+        "name": "exclusive-capacity-boundary",
+        "requirement_or_invariant": ["R1", "I1"],
+        "severities": ["SHOULD_FIX", "BLOCKER"],
+        "evidence_paths": ["slots.py"],
+        "terms_any": ["equal", "equality", "boundary", "exclusive", "<="]
+      }
+    ]
+  }
+}

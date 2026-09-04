@@ -1,0 +1,22 @@
+{
+  "id": "speculative-non-issue",
+  "title": "Adjudication rejects an unsupported performance warning",
+  "mode": "quick",
+  "task": "Update slugify(value). R1: trim surrounding whitespace, lowercase the value, and replace spaces with hyphens. This helper handles labels shorter than 100 characters. No regex requirement exists.",
+  "seeded_reviewer_claim": "BLOCKER: slugify uses str.replace, which is O(n) and therefore cannot scale. It must use a regular expression before release.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "exact_reviewers": ["acceptance", "test-adequacy"],
+    "max_reviewers": 2,
+    "findings": [
+      {
+        "name": "unsupported-performance-claim-rejected",
+        "status": "NON_ISSUE",
+        "requirement_or_invariant": ["none", "R1"],
+        "severities": ["NON_ISSUE"],
+        "terms_any": ["unsupported", "no failure", "shorter than 100", "regex", "non-issue", "not material"]
+      }
+    ]
+  }
+}

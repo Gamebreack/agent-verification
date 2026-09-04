@@ -1,0 +1,33 @@
+{
+  "date": "2026-09-04",
+  "skill_version": "0.1.0",
+  "host": "ChatGPT Work",
+  "model": "not recorded by the evaluation interface",
+  "structural_validation": "PASS",
+  "behavioral_cases": [
+    {"id": "acceptance-omission", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "bogus-mock", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "boundary-inversion", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "contract-regression", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "correct-low-risk", "result": "PASS", "expected_verdict": "PASS"},
+    {"id": "duplicate-event", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "speculative-non-issue", "result": "PASS", "expected_verdict": "PASS"},
+    {"id": "tenant-authorization", "result": "PASS", "expected_verdict": "FIX REQUIRED"},
+    {"id": "unavailable-service", "result": "PASS", "expected_verdict": "INCONCLUSIVE"}
+  ],
+  "independent_panel": {
+    "case": "contract-regression",
+    "result": "PASS",
+    "assurance": "independent panel",
+    "reviewer_count": 5,
+    "delegation_depth": 1,
+    "source_unchanged": true
+  },
+  "observed_revision": "Tightened reviewer precedence and panel bounds after release and feature modes selected redundant generic reviewers or displaced the contract specialist.",
+  "remaining_release_evidence": [
+    "Cursor discovery and invocation",
+    "OpenCode discovery and invocation",
+    "Clean-context behavior on each target host",
+    "License decision and distribution packaging"
+  ]
+}

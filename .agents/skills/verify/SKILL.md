@@ -12,12 +12,13 @@ Determine whether a software change is justified by relevant, trustworthy eviden
 Accept an optional mode and target:
 
 ```text
-verify [auto|quick|tests|feature|full|release] [target]
+verify [auto|quick|tests|feature|full|release] [target] [--report markdown|json]
 ```
 
 - Default mode: `auto`.
 - Default target: the current working-tree diff. If clean, use the current branch against its merge base.
 - A target may be a commit, range, branch, pull request, or explicit file set.
+- Default report format: `markdown`. When `json` is requested, read [references/json-report.md](references/json-report.md) and return only that object.
 - Never guess a destructive or remote target. Resolve it read-only before analysis.
 
 ## Hard constraints

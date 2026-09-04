@@ -6,23 +6,13 @@ Build one canonical Agent Skill at `.agents/skills/verify`. Keep the orchestrati
 
 The verification lead uses the host's native subagent capability. There is no custom runtime.
 
-```text
-original task + resolved change
-            |
-            v
-   Verification Contract
-            |
-            v
- risk and surface selection
-            |
-            v
- clean-context role reviewers
-            |
-            v
- evidence-gated adjudication
-            |
-            v
- PASS | PASS WITH NOTES | FIX REQUIRED | INCONCLUSIVE
+```mermaid
+flowchart TD
+    A["Task + resolved change"] --> B["Verification Contract"]
+    B --> C["Risk and surface selection"]
+    C --> D["Clean-context reviewers"]
+    D --> E["Evidence-gated adjudication"]
+    E --> F["PASS / NOTES / FIX / INCONCLUSIVE"]
 ```
 
 ## Why a single orchestrator skill
@@ -46,7 +36,7 @@ original task + resolved change
 | Host | Canonical skill | Invocation | Adapter |
 |---|---|---|---|
 | Cursor | `.agents/skills/verify` or installed GitHub skill | `/verify` | None |
-| ChatGPT Work | bundled/installed skill | `@verify` | Future plugin packaging |
+| ChatGPT Work | plugin-bundled skill | `@verify` | Future plugin packaging |
 | Codex CLI/IDE | `.agents/skills/verify` | `$verify` | None |
 | OpenCode | `.agents/skills/verify` | `/verify` | `.opencode/commands/verify.md` |
 
@@ -56,10 +46,13 @@ Host-specific files may invoke or expose the canonical skill, but must not dupli
 
 If the host lacks subagents, the lead may run roles sequentially, but must label the report `degraded independence`. Essential unavailable evidence or materially ambiguous intent produces `INCONCLUSIVE`, not `PASS`.
 
+## Evaluation architecture
+
+`scripts/eval_harness.py` materializes each case as a real Git repository with a baseline commit and candidate working-tree diff. The candidate's own tests normally pass. A verifier report is scored against semantic expectations—verdict, selected roles, contract linkage, evidence paths, defect concepts, evidence gaps, and source immutability—rather than exact prose.
+
 ## Deferred decisions
 
 - Plugin packaging and marketplace distribution.
 - CI/non-interactive report format.
-- Machine-readable report schema beyond the reviewer block.
 - Default license.
 - Optional host-specific permission profiles for stronger read-only enforcement.

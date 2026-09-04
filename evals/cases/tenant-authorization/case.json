@@ -1,0 +1,21 @@
+{
+  "id": "tenant-authorization",
+  "title": "Authorization accepts a user from the wrong tenant",
+  "mode": "release",
+  "task": "Implement can_view(user_tenant, resource_tenant). R1: access is allowed only when both tenant identifiers are present and exactly equal. R2: cross-tenant access and missing identifiers must be denied. I1: no resource may be read across tenant boundaries.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": ["acceptance", "regression", "security"],
+    "max_reviewers": 5,
+    "findings": [
+      {
+        "name": "cross-tenant-access",
+        "requirement_or_invariant": ["R1", "R2", "I1"],
+        "severities": ["BLOCKER"],
+        "evidence_paths": ["auth.py"],
+        "terms_any": ["cross-tenant", "different tenant", "different non-empty tenant", "equality", "tenant boundary", "unauthorized"]
+      }
+    ]
+  }
+}

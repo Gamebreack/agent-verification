@@ -1,0 +1,21 @@
+{
+  "id": "contract-regression",
+  "title": "A provider change silently breaks an existing consumer",
+  "mode": "feature",
+  "task": "Add an email field to get_user(user_id). R1: responses include email. P1: preserve the existing required name field because render_user consumes it. Do not rename existing response fields.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": ["acceptance", "test-adequacy", "regression", "contract-boundaries"],
+    "max_reviewers": 5,
+    "findings": [
+      {
+        "name": "renamed-name-field",
+        "requirement_or_invariant": ["P1"],
+        "severities": ["SHOULD_FIX", "BLOCKER"],
+        "evidence_paths": ["users.py", "consumer.py"],
+        "terms_any": ["name", "display_name", "consumer", "keyerror", "contract"]
+      }
+    ]
+  }
+}

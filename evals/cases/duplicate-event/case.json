@@ -1,0 +1,21 @@
+{
+  "id": "duplicate-event",
+  "title": "Repeated event delivery creates duplicate history",
+  "mode": "feature",
+  "task": "Implement HistoryStore.record(event_id, value). R1: record a new event once. R2: repeated delivery of the same event_id must not create another history entry. I1: event_id is unique in history.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": ["acceptance", "test-adequacy", "boundary-invariants"],
+    "max_reviewers": 5,
+    "findings": [
+      {
+        "name": "non-idempotent-record",
+        "requirement_or_invariant": ["R2", "I1"],
+        "severities": ["SHOULD_FIX", "BLOCKER"],
+        "evidence_paths": ["history.py"],
+        "terms_any": ["duplicate", "repeated", "idempot", "same event"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "correct-low-risk",
+  "title": "A correct low-risk change avoids unnecessary reviewers",
+  "mode": "auto",
+  "task": "Update display_status(value). R1: convert a lowercase snake_case status into title-cased words. Inputs contain only lowercase ASCII letters and underscores. Preserve existing behavior for one-word values.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "exact_reviewers": ["acceptance", "test-adequacy"],
+    "forbidden_reviewers": ["security", "contract-boundaries", "failure-observability", "critical-journey", "adversarial"],
+    "max_reviewers": 2
+  }
+}

@@ -6,7 +6,11 @@ It derives a Verification Contract from the original task, selects a small risk-
 
 ## Status
 
-Architecture/specification draft. The first behavioral evaluation suite is still to be implemented.
+**Working MVP — v0.1.0.**
+
+The package has a deterministic validation harness and nine behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, and a correct low-risk change. All nine semantic evaluations passed on 2026-09-04. A separate end-to-end run used five clean-context specialist reviewers and passed the same scorer.
+
+Cursor and OpenCode execution remain to be tested before a portable release. ChatGPT web/mobile distribution also requires plugin packaging.
 
 ## Core properties
 
@@ -21,13 +25,22 @@ Architecture/specification draft. The first behavioral evaluation suite is still
 ## Invocation
 
 - Cursor: `/verify [mode] [target]`
-- ChatGPT Work: select `verify` with `@`
+- ChatGPT Work: available after future plugin packaging
 - Codex CLI/IDE: `$verify [mode] [target]`
 - OpenCode: `/verify [mode] [target]`
 
 Modes: `auto`, `quick`, `tests`, `feature`, `full`, and `release`.
 
 The canonical skill lives at [`.agents/skills/verify`](.agents/skills/verify). OpenCode's command file is only an invocation adapter; verification policy remains in the shared skill.
+
+## Validate
+
+```bash
+python3 scripts/eval_harness.py validate
+python3 -m unittest discover -s tests -v
+```
+
+See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases against a model host.
 
 ## Verdicts
 
@@ -51,3 +64,6 @@ The canonical skill lives at [`.agents/skills/verify`](.agents/skills/verify). O
 
 - [Architecture](docs/architecture.md)
 - [MVP backlog](docs/mvp-backlog.md)
+- [Installation](docs/installation.md)
+- [Behavioral evaluation](docs/evaluation.md)
+- [Latest evaluation run](evals/runs/2026-09-04-chatgpt-work.json)

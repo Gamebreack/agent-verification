@@ -1,0 +1,13 @@
+{
+  "id": "unavailable-service",
+  "title": "Essential release evidence depends on an unavailable service",
+  "mode": "release",
+  "task": "Implement verify_webhook(payload, signature, secret) using HMAC-SHA256. R1: valid signatures pass and invalid signatures fail. E1 (mandatory release evidence): confirm compatibility using a signed webhook produced by the AcmePay sandbox. The sandbox, its signing specification, and credentials are intentionally unavailable in this repository; do not substitute a locally generated signature for E1.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "INCONCLUSIVE",
+    "required_reviewers": ["acceptance", "security", "contract-boundaries"],
+    "max_reviewers": 5,
+    "evidence_gap_kinds": ["UNAVAILABLE"]
+  }
+}
