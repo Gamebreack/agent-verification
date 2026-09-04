@@ -1,0 +1,86 @@
+# Findings and Adjudication
+
+## Reviewer output
+
+Return `NO FINDINGS` or one block per claim:
+
+```yaml
+id: <role>-<number>
+reviewer: <role>
+claim: <one falsifiable defect claim>
+requirement_or_invariant: <contract id or none>
+evidence:
+  - <file and line, command and result, or direct observation>
+failure_mechanism: <trigger -> behavior -> impact>
+proposed_severity: BLOCKER | SHOULD_FIX | OPTIONAL
+confidence: high | medium | low
+scope_relevance: <why this belongs to the target contract>
+suggested_check: <smallest check that would confirm or refute the claim, if needed>
+```
+
+Do not combine unrelated defects. Do not report style preferences, generic risk language, or a concern without a plausible failure chain.
+
+## Adjudication gate
+
+For every claim, determine:
+
+1. Is the cited evidence real and attributable to the resolved target?
+2. Does the failure mechanism follow from that evidence?
+3. Is the claim relevant to a requirement, invariant, preserved behavior, constraint, or necessary release property?
+4. Is the impact material at the stated severity?
+5. Does counter-evidence invalidate or narrow it?
+6. Is it a duplicate symptom of an already accepted root cause?
+
+Reject a finding as `NON_ISSUE` when any required link is unsupported. Preserve a concise rejection reason for disputed or high-severity claims.
+
+## Validated severity
+
+- `BLOCKER`: the requested behavior is absent or wrong, or there is demonstrated risk to security, authorization, data integrity, destructive safety, or deployability that makes shipping unsafe.
+- `SHOULD_FIX`: a real, evidenced defect with plausible material impact that should be corrected before considering the change complete.
+- `OPTIONAL`: a supported improvement that is not required for correctness, safety, or the agreed scope.
+- `NON_ISSUE`: unsupported, irrelevant, contradicted, duplicate, or preference-only.
+
+Reviewer-proposed severity is advisory. The verification lead assigns validated severity.
+
+## Evidence gaps
+
+- `MISSING`: the change lacks evidence reasonably required by its contract. This can produce `FIX REQUIRED`.
+- `UNAVAILABLE`: the evidence could not be collected because of environment, permissions, unavailable services, or unresolved requirements. This can produce `INCONCLUSIVE`.
+- Do not convert an unavailable check into a passing check.
+
+## Verdict rules
+
+- `PASS`: no validated `BLOCKER` or `SHOULD_FIX`; all required evidence is present and supports the contract.
+- `PASS WITH NOTES`: same as `PASS`, with one or more validated `OPTIONAL` findings.
+- `FIX REQUIRED`: at least one validated `BLOCKER` or `SHOULD_FIX`, or a material `MISSING` evidence requirement that the implementation should supply.
+- `INCONCLUSIVE`: essential evidence is `UNAVAILABLE`, the source of truth is materially ambiguous, or clean evaluation cannot be completed safely.
+
+## Final report
+
+```markdown
+# Verification: <VERDICT>
+
+Target: <resolved target>
+Assurance: independent panel | degraded independence
+
+## Contract
+<requirements, risks, invariants, and preserved behavior>
+
+## Panel
+<reviewer and selection reason>
+
+## Checks executed
+<command/inspection and result; distinguish not run>
+
+## Validated findings
+<ordered BLOCKER, SHOULD_FIX, OPTIONAL>
+
+## Rejected claims
+<only material disputes/non-issues>
+
+## Evidence gaps
+<missing or unavailable evidence>
+
+## Minimum next action
+<smallest action that changes the verdict>
+```

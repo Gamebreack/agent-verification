@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verification Harness"
+  short_description: "Evidence-gated software verification"
+  default_prompt: "Use $verify to independently verify this change against its original requirements."
