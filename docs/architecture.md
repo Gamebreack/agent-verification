@@ -20,7 +20,7 @@ flowchart TD
 - Specialist roles are implementation details, not capabilities users need to discover independently.
 - Separate role files preserve progressive disclosure and let clean-context reviewers load only their mandate.
 - Permanent host-specific agent definitions would duplicate policy and drift.
-- The same skill is discoverable by Codex and OpenCode from `.agents/skills`; Cursor implements the Agent Skills standard.
+- The same skill is discoverable by Codex, OpenCode, Cursor, and Antigravity from `.agents/skills`, following the Agent Skills standard.
 
 ## Execution boundaries
 
@@ -39,6 +39,7 @@ flowchart TD
 | ChatGPT Work | plugin-bundled skill | `@verify` | Future plugin packaging |
 | Codex CLI/IDE | `.agents/skills/verify` | `$verify` | None |
 | OpenCode | `.agents/skills/verify` | `/verify` | `.opencode/commands/verify.md` |
+| Antigravity (`agy`) | `.agents/skills/verify` | `/verify` (interactive TUI) / contextual (CLI `-p`) | None |
 
 Host-specific files may invoke or expose the canonical skill, but must not duplicate its verification policy.
 
