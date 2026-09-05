@@ -20,6 +20,9 @@ class EvaluationHarnessTest(unittest.TestCase):
                 "speculative-non-issue",
                 "tenant-authorization",
                 "unavailable-service",
+                "v0.2-multi-trigger-bounded",
+                "v0.2-pure-formatter-no-overflow",
+                "v0.2-retry-idempotency",
             },
         )
 

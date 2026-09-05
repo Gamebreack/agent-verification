@@ -1,0 +1,23 @@
+{
+    "id": "v0.2-pure-formatter-no-overflow",
+    "title": "A trivial pure formatter must select only Acceptance + Test adequacy",
+    "mode": "auto",
+    "task": "Implement format_id(value). R1: return 'id-' followed by a 4-digit zero-padded representation of value. Inputs are non-negative integers.",
+    "test_expectation": "pass",
+    "expected": {
+        "verdict": "PASS",
+        "exact_reviewers": ["acceptance", "test-adequacy"],
+        "forbidden_reviewers": [
+            "security",
+            "contract-boundaries",
+            "failure-observability",
+            "critical-journey",
+            "adversarial",
+            "regression",
+            "mutation-sabotage",
+            "boundary-invariants",
+            "simplification"
+        ],
+        "max_reviewers": 2
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "id": "v0.2-retry-idempotency",
+    "title": "Idempotent event dedupe pulls exactly Acceptance + Test adequacy + Boundary/invariants",
+    "mode": "auto",
+    "task": "Implement dedupe(events). R1: return events with duplicate ids removed. P1: preserve first-seen order. I1: repeated delivery of the same event id must not create duplicate history.",
+    "test_expectation": "pass",
+    "expected": {
+        "verdict": "PASS",
+        "exact_reviewers": ["acceptance", "test-adequacy", "boundary-invariants"],
+        "forbidden_reviewers": [
+            "security",
+            "contract-boundaries",
+            "failure-observability",
+            "critical-journey",
+            "adversarial",
+            "regression",
+            "mutation-sabotage",
+            "simplification"
+        ],
+        "max_reviewers": 3
+    }
+}

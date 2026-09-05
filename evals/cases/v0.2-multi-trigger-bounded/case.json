@@ -1,0 +1,26 @@
+{
+    "id": "v0.2-multi-trigger-bounded",
+    "title": "Auth + quota + response schema trigger 3 specialists and stay within the 5-reviewer bound",
+    "mode": "auto",
+    "task": "Implement allocate(tenant_id, requested, current, max_allowed). R1: deny when tenant_id is empty with reason 'unauthorized'. R2: grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise. R3: response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters. I1: a missing tenant must never reach the quota math.",
+    "test_expectation": "pass",
+    "expected": {
+        "verdict": "PASS",
+        "exact_reviewers": [
+            "acceptance",
+            "test-adequacy",
+            "security",
+            "boundary-invariants",
+            "contract-boundaries"
+        ],
+        "forbidden_reviewers": [
+            "critical-journey",
+            "adversarial",
+            "failure-observability",
+            "regression",
+            "mutation-sabotage",
+            "simplification"
+        ],
+        "max_reviewers": 5
+    }
+}
