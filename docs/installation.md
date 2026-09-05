@@ -2,7 +2,7 @@
 
 ## Project-local use
 
-Keep `.agents/skills/verify` in the repository root. Codex, Cursor, and OpenCode discover this Agent Skills location. Restart the host if it was already running when the skill was added.
+Keep `.agents/skills/verify` in the repository root. Codex, Cursor, OpenCode, and Antigravity discover this Agent Skills location. Restart the host if it was already running when the skill was added.
 
 Invoke it as follows:
 
@@ -11,6 +11,7 @@ Invoke it as follows:
 | Codex CLI or IDE | `$verify auto` |
 | Cursor | choose `/verify`, then provide the mode and target |
 | OpenCode | `/verify auto` through the included command adapter |
+| Antigravity (`agy`) | `/verify auto` in interactive TUI; in `-p` print mode invoke contextually (e.g., "use the verify skill on this diff") |
 
 The OpenCode adapter lives at `.opencode/commands/verify.md`; it forwards arguments and does not duplicate verification policy.
 
@@ -21,6 +22,7 @@ Copy or symlink the `verify` directory to the host's user skill location:
 - Codex: `~/.agents/skills/verify`
 - Cursor: `~/.cursor/skills/verify`
 - OpenCode: `~/.agents/skills/verify` or `~/.config/opencode/skills/verify`
+- Antigravity (`agy`): `~/.gemini/antigravity-cli/skills/`
 
 The canonical source remains `.agents/skills/verify`. Avoid maintaining separate modified copies per host.
 
@@ -38,3 +40,5 @@ Confirm the host lists `verify`, then run it against a small working-tree change
 - [Cursor Agent Skills](https://cursor.com/docs/skills)
 - [OpenCode Agent Skills](https://opencode.ai/docs/skills/)
 - [OpenCode commands](https://opencode.ai/docs/commands/)
+- [Antigravity skills](https://antigravity.google/docs/skills/)
+- [Antigravity CLI plugins & skills](https://antigravity.google/docs/cli/plugins/)
