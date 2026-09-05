@@ -29,10 +29,12 @@ Evaluate outcomes and reasoning, not exact wording. Record false negatives, fals
 
 ## Milestone 3: Portability checks
 
-- [ ] Cursor discovery and `/verify` invocation.
-- [ ] Codex discovery and `$verify` invocation.
-- [ ] OpenCode discovery and wrapper invocation.
+- [x] Cursor discovery and `/verify` invocation.
+- [x] Codex discovery and `$verify` invocation.
+- [x] OpenCode discovery and wrapper invocation.
+- [x] Antigravity skill discovery and `/verify` slash-command surface in interactive TUI (per [official docs](https://antigravity.google/docs/cli/plugins/)).
 - [ ] Confirm reviewers receive clean context on each target host.
+- [ ] End-to-end `/verify quick <fixture>` on at least two hosts (closes the portable release gate).
 - [x] Confirm depth-one and read-only constraints in ChatGPT Work.
 
 ## Milestone 4: Distribution
@@ -55,4 +57,4 @@ Satisfied on 2026-09-04 in ChatGPT Work:
 - [x] Distinguish `FIX REQUIRED` from `INCONCLUSIVE`.
 - [x] Leave target source unchanged.
 
-Portable release still requires successful Cursor and OpenCode runs plus a license decision.
+Portable release still requires end-to-end `/verify` runs on seeded fixtures on at least two hosts. License decided (MIT).
