@@ -67,3 +67,18 @@ See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases a
 - [Installation](docs/installation.md)
 - [Behavioral evaluation](docs/evaluation.md)
 - [Latest evaluation run](evals/runs/2026-09-04-chatgpt-work.json)
+
+## Distribution
+
+v1 ships as a standalone Agent Skill at `.agents/skills/verify`, with a thin
+OpenCode invocation adapter at `.opencode/commands/verify.md`. The Skill is
+discovered by Codex, Cursor, and OpenCode from this layout, and is symlinked
+or copied to each host's user skill location for global use.
+
+Marketplace packaging (ChatGPT web/mobile, plugin manifests, hosted stores)
+is intentionally deferred until behavioral fixtures pass on at least two
+hosts and the cross-host portability gate is satisfied.
+
+## License
+
+Released under the [MIT License](LICENSE).

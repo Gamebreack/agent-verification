@@ -37,8 +37,8 @@ Evaluate outcomes and reasoning, not exact wording. Record false negatives, fals
 
 ## Milestone 4: Distribution
 
-- [ ] Choose a license.
-- [ ] Decide standalone-skill versus plugin release packaging.
+- [x] Choose a license. (MIT — see `LICENSE`.)
+- [x] Decide standalone-skill versus plugin release packaging. (Standalone Agent Skill at `.agents/skills/verify`, with a thin OpenCode adapter. Marketplace packaging deferred until portability gates pass.)
 - [x] Add installation instructions with explicit untested-host boundaries.
 - [x] Add versioning and release criteria.
 - [ ] Publish only after behavioral fixtures pass on at least two hosts.
