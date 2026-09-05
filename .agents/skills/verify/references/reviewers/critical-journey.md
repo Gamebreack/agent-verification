@@ -13,3 +13,7 @@ Does high-fidelity evidence establish the critical user or business journey acro
 - Prefer a focused integration test when full end-to-end fidelity adds no material evidence.
 
 Do not demand exhaustive end-to-end coverage. Treat flakiness and environment dependence as evidence-quality concerns.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

@@ -51,7 +51,17 @@ Read [references/verification-contract.md](references/verification-contract.md).
 
 ### 3. Select the panel
 
-Read [references/reviewer-selection.md](references/reviewer-selection.md). Select only reviewers justified by the mode, changed surfaces, and risk. State why each was selected. In `auto`, normally use two to five reviewers.
+Apply staged escalation. Start from the mode baseline; add a specialist only when an explicit surface trigger or risk band applies; drop a default reviewer when the contract shows it is irrelevant.
+
+**Baseline.** For substantive code changes, the baseline panel is Acceptance + Test adequacy. Apply to `auto`, `quick`, `feature`, and `release`. Other modes use their own starting points.
+
+**Escalation.** Add a specialist only when a concrete trigger from [references/reviewer-selection.md](references/reviewer-selection.md) is present. Each addition must cite its trigger. Triggers are not interchangeable with generic risk language.
+
+**Hard bounds.** No more than five reviewers in `auto`, `quick`, `feature`, or `release`. `tests` uses three. `full` may exceed five only when distinct changed surfaces justify every additional role.
+
+**Removal.** Drop a default reviewer when the contract shows it is irrelevant (e.g., Test adequacy when no test files changed). An empty panel is acceptable for trivial changes — return `INCONCLUSIVE` rather than invent reviewers.
+
+**Justification.** State why each inclusion was selected and any non-obvious omission.
 
 ### 4. Dispatch clean-context reviewers
 
@@ -60,7 +70,8 @@ When the host supports subagents, run applicable reviewers independently and con
 - the Verification Contract;
 - the resolved target/diff and access to necessary repository context;
 - its one role file under `references/reviewers/`;
-- the finding schema in [references/finding-and-adjudication.md](references/finding-and-adjudication.md).
+- the finding schema in [references/finding-and-adjudication.md](references/finding-and-adjudication.md);
+- [references/efficiency-contract.md](references/efficiency-contract.md) — the shared method constraints that bound every reviewer.
 
 Explicitly tell each reviewer not to edit, fix, delegate, or report concerns outside its mandate. A reviewer may run existing read-only analysis and test commands when needed.
 

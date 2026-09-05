@@ -20,6 +20,15 @@ suggested_check: <smallest check that would confirm or refute the claim, if need
 
 Do not combine unrelated defects. Do not report style preferences, generic risk language, or a concern without a plausible failure chain.
 
+## Panel validation
+
+Before adjudicating findings, validate the panel composition itself. For each selected reviewer:
+
+- Confirm an explicit surface trigger or risk band justifies its inclusion.
+- If a baseline reviewer (Acceptance or Test adequacy) is absent for a substantive change, confirm a documented removal reason.
+
+If the panel exceeds two reviewers without per-reviewer justification, surface a single panel-level `OPTIONAL` finding labeled `panel-over-selection`. If a baseline reviewer is absent without a documented reason, surface `panel-missing-baseline`. Both are advisory; they do not block `PASS` unless they correlate with a substantive defect.
+
 ## Adjudication gate
 
 For every claim, determine:

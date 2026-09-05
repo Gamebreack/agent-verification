@@ -13,3 +13,7 @@ Does the target provide every observable behavior in the Verification Contract?
 - Check negative behavior and explicit non-goals when relevant.
 
 Do not evaluate general style, architecture preferences, or test-suite craftsmanship except where it prevents acceptance evidence. Report only falsifiable gaps.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

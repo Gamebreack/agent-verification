@@ -14,3 +14,7 @@ When dependencies or asynchronous work fail, does the system behave safely and l
 - existing runbooks or operational expectations for critical paths.
 
 Do not demand observability machinery for trivial code. Tie every finding to a plausible operational failure and the minimum evidence needed to detect or recover from it.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

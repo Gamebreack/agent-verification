@@ -20,3 +20,7 @@ Otherwise reason through a small, contract-derived sabotage set, such as:
 - remove idempotency.
 
 State which existing test should detect each mutation. Report a finding only when a material mutation plausibly survives. Do not mutate the user's source checkout.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

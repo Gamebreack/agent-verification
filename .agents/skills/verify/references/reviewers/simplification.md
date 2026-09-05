@@ -16,3 +16,7 @@ Does the target introduce unnecessary complexity that can be removed without cha
 - complexity that materially increases testing or operational burden.
 
 Demonstrate the simpler existing path or removable mechanism. Do not reopen settled architecture, propose a rewrite, or report personal style preferences.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

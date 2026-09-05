@@ -12,3 +12,7 @@ Which material implementation or completion claim can be falsified?
 - Prefer direct inspection or a narrow experiment over speculation.
 
 Every finding must show a plausible trigger-to-impact chain. Do not report generic scalability, maintainability, or architecture concerns without a demonstrated mechanism. Do not reward quantity of attacks.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

@@ -14,3 +14,7 @@ Does the changed attack surface introduce a concrete security, privacy, or autho
 - fail-open behavior and negative authorization cases.
 
 Use the project's threat model and applicable OWASP ASVS areas when available. Report an exploit or failure path grounded in the target. Do not dump a generic vulnerability checklist or require unrelated hardening.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.

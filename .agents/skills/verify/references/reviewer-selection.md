@@ -1,6 +1,13 @@
 # Reviewer Selection
 
-Use the requested mode as a starting point, then add a specialist only when a changed surface or risk justifies it.
+Use the requested mode as the baseline, then add or drop specialists by explicit surface trigger or risk band. State why each inclusion and any non-obvious omission.
+
+## Staged escalation
+
+1. **Baseline**: Acceptance + Test adequacy. Apply to substantive code changes across `auto`, `quick`, `feature`, and `release` modes.
+2. **Add specialist**: only when a concrete surface trigger or risk band applies. Each addition must cite its trigger.
+3. **Drop default**: when the contract shows a default reviewer is irrelevant (e.g., Test adequacy with no test changes), omit it.
+4. **Empty panel**: acceptable for trivial changes. Return `INCONCLUSIVE` over inventing reviewers.
 
 ## Modes
 

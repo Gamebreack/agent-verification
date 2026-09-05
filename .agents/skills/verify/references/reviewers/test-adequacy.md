@@ -17,3 +17,7 @@ Do the tests provide trustworthy evidence for the requested behavior and risks?
 - untested branches that matter to the contract.
 
 Coverage may identify unexecuted code but never proves assertion quality. Prefer the smallest test level that can establish the behavior. Do not demand every test type.
+
+## Method constraints
+
+Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.
