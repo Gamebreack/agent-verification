@@ -10,7 +10,7 @@ It derives a Verification Contract from the original task, selects a small risk-
 
 The package has a deterministic validation harness and nine behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, and a correct low-risk change. All nine semantic evaluations passed on 2026-09-04. A separate end-to-end run used five clean-context specialist reviewers and passed the same scorer.
 
-Cursor and OpenCode execution remain to be tested before a portable release. ChatGPT web/mobile distribution also requires plugin packaging.
+Skill discovery verified for Cursor, Codex, OpenCode, and Antigravity (`agy`). End-to-end `/verify` runs on seeded fixtures remain before the portable release gate. ChatGPT web/mobile distribution also requires plugin packaging.
 
 ## Core properties
 
@@ -28,6 +28,7 @@ Cursor and OpenCode execution remain to be tested before a portable release. Cha
 - ChatGPT Work: available after future plugin packaging
 - Codex CLI/IDE: `$verify [mode] [target]`
 - OpenCode: `/verify [mode] [target]`
+- Antigravity (`agy`): `/verify [mode] [target]` in interactive TUI (workspace skill auto-registers as slash command); in `-p` print mode invoke contextually (e.g., "use the verify skill on this diff")
 
 Modes: `auto`, `quick`, `tests`, `feature`, `full`, and `release`.
 
@@ -72,7 +73,7 @@ See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases a
 
 v1 ships as a standalone Agent Skill at `.agents/skills/verify`, with a thin
 OpenCode invocation adapter at `.opencode/commands/verify.md`. The Skill is
-discovered by Codex, Cursor, and OpenCode from this layout, and is symlinked
+discovered by Codex, Cursor, OpenCode, and Antigravity from this layout, and is symlinked
 or copied to each host's user skill location for global use.
 
 Marketplace packaging (ChatGPT web/mobile, plugin manifests, hosted stores)
