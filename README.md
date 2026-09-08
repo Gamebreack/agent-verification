@@ -6,9 +6,9 @@ It derives a Verification Contract from the original task, selects a small risk-
 
 ## Status
 
-**Working MVP — v0.1.0.**
+**Release — v0.3.0.**
 
-The package has a deterministic validation harness and nine behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, and a correct low-risk change. All nine semantic evaluations passed on 2026-09-04. A separate end-to-end run used five clean-context specialist reviewers and passed the same scorer.
+The package has a deterministic validation harness and 17 behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, a correct low-risk change, and v0.3 incremental re-verification and assurance boundaries. All 17 semantic evaluations pass against the test harness.
 
 Skill discovery verified for Cursor, Codex, OpenCode, and Antigravity (`agy`). End-to-end `/verify` runs on seeded fixtures remain before the portable release gate. ChatGPT web/mobile distribution also requires plugin packaging.
 
@@ -19,18 +19,25 @@ Skill discovery verified for Cursor, Codex, OpenCode, and Antigravity (`agy`). E
 - acceptance checked against original intent;
 - semantic test-adequacy and mutation/sabotage analysis;
 - evidence-gated severity and reviewer-of-reviewers adjudication;
+- assurance-boundary targets (feature, subsystem, workflow, artifact) with target identity contracts;
+- opt-in incremental re-verification using target-local state persistence and delta invalidation;
+- scope-preservation guards against artificial assurance narrowing;
 - read-only verification with no autonomous fixing;
 - portable Agent Skills package with thin host adapters.
 
 ## Invocation
 
-- Cursor: `/verify [mode] [target]`
+- Cursor: `/verify [mode] [target] [--report markdown|json]`
 - ChatGPT Work: available after future plugin packaging
-- Codex CLI/IDE: `$verify [mode] [target]`
-- OpenCode: `/verify [mode] [target]`
-- Antigravity (`agy`): `/verify [mode] [target]` in interactive TUI (workspace skill auto-registers as slash command); in `-p` print mode invoke contextually (e.g., "use the verify skill on this diff")
+- Codex CLI/IDE: `$verify [mode] [target] [--report markdown|json]`
+- OpenCode: `/verify [mode] [target] [--report markdown|json]`
+- Antigravity (`agy`): `/verify [mode] [target] [--report markdown|json]` in interactive TUI (workspace skill auto-registers as slash command); in `-p` print mode invoke contextually (e.g., "use the verify skill on this diff")
 
 Modes: `auto`, `quick`, `tests`, `feature`, `full`, and `release`.
+
+Targets:
+- Working-tree diff (default), commit, range, branch, PR, or explicit file set;
+- Assurance-boundary targets: `feature:<name>`, `subsystem:<name>`, `workflow:<name>`, `artifact:<name>` (requiring `target.identity` in the Verification Contract).
 
 The canonical skill lives at [`.agents/skills/verify`](.agents/skills/verify). OpenCode's command file is only an invocation adapter; verification policy remains in the shared skill.
 

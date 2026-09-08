@@ -39,9 +39,9 @@ Confirm the host lists `verify`, then run it against a small working-tree change
 Incremental re-verification stores a target-local state file. The skill never writes this file itself; a host action stores it.
 
 - Default state path: `<cwd>/.verify/state.json`. Override with the `VERIFY_STATE_PATH` environment variable.
-- After a successful verification, invoke the host's save action (`/verify save` in the included OpenCode command adapter, or the equivalent in other hosts). The skill emits the state record in its JSON report; the host persists it.
+- After a successful verification, the state record is emitted in the JSON report (`--report json`). The host or user persists this payload to the target state file (`.verify/state.json` or `VERIFY_STATE_PATH`).
 - Add `.verify/` to the target repository's `.gitignore` unless the team explicitly wants the state in version control.
-- The skill refuses to use a stale or mismatched state file. See [`.agents/skills/verify/references/state-persistence.md`](.agents/skills/verify/references/state-persistence.md) for the full rules and schema.
+- The skill refuses to use a stale or mismatched state file. See [`.agents/skills/verify/references/state-persistence.md`](../.agents/skills/verify/references/state-persistence.md) for the full rules and schema.
 
 ## Host documentation
 
