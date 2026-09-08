@@ -1,5 +1,29 @@
+# Byte-compiled / cache files
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 .coverage
+.mypy_cache/
+.ruff_cache/
+
+# Verification skill local state & harness
+.verify/
+.verify-eval/
 eval-report.json
+
+# Git bundles & archives
+*.bundle
+*.tar.gz
+*.zip
+
+# Environments
+.venv/
+env/
+venv/
+
+# Editor & OS files
+.DS_Store
+*.swp
+*.swo
+*~
