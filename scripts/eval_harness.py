@@ -54,14 +54,7 @@ def case_ids() -> list[str]:
 def copy_snapshot(source: Path, destination: Path) -> None:
     if not source.is_dir():
         raise EvaluationError(f"missing snapshot: {source}")
-    for item in source.rglob("*"):
-        relative = item.relative_to(source)
-        target = destination / relative
-        if item.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
-        else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(item, target)
+    shutil.copytree(source, destination, dirs_exist_ok=True)
 
 
 def materialize(case_id: str, destination: Path) -> dict[str, Any]:
@@ -74,18 +67,26 @@ def materialize(case_id: str, destination: Path) -> dict[str, Any]:
     run(["git", "init", "-q", "-b", "main"], destination)
     run(["git", "config", "user.name", "Verify Eval"], destination)
     run(["git", "config", "user.email", "verify-eval@example.invalid"], destination)
+    exclude = destination / ".git" / "info" / "exclude"
+    with exclude.open("a", encoding="utf-8") as handle:
+        handle.write("\n.verify/\n.verify-eval/\n")
     run(["git", "add", "."], destination)
     run(["git", "commit", "-q", "-m", "baseline"], destination)
+    base_sha = run(["git", "rev-parse", "HEAD"], destination).stdout.strip()
     copy_snapshot(case_dir / "candidate", destination)
+
+    state_file = destination / ".verify" / "state.json"
+    if state_file.is_file():
+        state_text = state_file.read_text(encoding="utf-8")
+        if "0000000000000000000000000000000000000000" in state_text:
+            state_text = state_text.replace("0000000000000000000000000000000000000000", base_sha)
+            state_file.write_text(state_text, encoding="utf-8")
 
     eval_dir = destination / ".verify-eval"
     eval_dir.mkdir()
     (eval_dir / "task.md").write_text(case["task"].rstrip() + "\n", encoding="utf-8")
     if claim := case.get("seeded_reviewer_claim"):
         (eval_dir / "reviewer-claim.md").write_text(claim.rstrip() + "\n", encoding="utf-8")
-    exclude = destination / ".git" / "info" / "exclude"
-    with exclude.open("a", encoding="utf-8") as handle:
-        handle.write("\n.verify-eval/\n")
     return case
 
 
@@ -126,6 +127,22 @@ def validate_manifest(case_id: str, case: dict[str, Any]) -> None:
         raise EvaluationError(f"{case_id}: invalid expected verdict")
     if case["test_expectation"] not in {"pass", "unavailable"}:
         raise EvaluationError(f"{case_id}: invalid test_expectation")
+    incremental = case.get("incremental")
+    if incremental is not None:
+        if not isinstance(incremental, dict):
+            raise EvaluationError(f"{case_id}: incremental must be an object")
+        target_kind = incremental.get("target_kind")
+        if target_kind not in {"feature", "subsystem", "workflow", "artifact", "files"}:
+            raise EvaluationError(f"{case_id}: invalid incremental.target_kind: {target_kind!r}")
+        if not isinstance(incremental.get("expects_incremental", False), bool):
+            raise EvaluationError(f"{case_id}: incremental.expects_incremental must be a boolean")
+        expected_invalidation = incremental.get("expected_invalidation")
+        if expected_invalidation is not None and not isinstance(expected_invalidation, dict):
+            raise EvaluationError(f"{case_id}: incremental.expected_invalidation must be an object")
+        for key in ("expected_drift", "expected_scope_rejection"):
+            value = incremental.get(key)
+            if value is not None and not isinstance(value, bool):
+                raise EvaluationError(f"{case_id}: incremental.{key} must be a boolean")
 
 
 def validate_package() -> None:
@@ -137,6 +154,8 @@ def validate_package() -> None:
         SKILL_DIR / "references" / "reviewer-selection.md",
         SKILL_DIR / "references" / "finding-and-adjudication.md",
         SKILL_DIR / "references" / "json-report.md",
+        SKILL_DIR / "references" / "incremental-verification.md",
+        SKILL_DIR / "references" / "state-persistence.md",
     ]
     for path in required_skill_files:
         if not path.is_file():
@@ -153,6 +172,12 @@ def validate_package() -> None:
             with tempfile.TemporaryDirectory(prefix=f"verify-{case_id}-") as tmp:
                 repo = Path(tmp) / "repo"
                 materialize(case_id, repo)
+                if case.get("incremental", {}).get("expects_incremental"):
+                    state_path = repo / ".verify" / "state.json"
+                    if not state_path.is_file():
+                        raise EvaluationError(
+                            f"{case_id}: incremental case requires base/.verify/state.json"
+                        )
                 if run(["git", "diff", "--quiet"], repo, check=False).returncode == 0:
                     raise EvaluationError(f"{case_id}: candidate has no working-tree diff")
                 before = tree_digest(repo)
@@ -214,7 +239,16 @@ def score_report(case_id: str, report_path: Path) -> None:
 
     if report.get("case_id") != case_id:
         errors.append(f"case_id must be {case_id!r}")
-    if report.get("verdict") != expected["verdict"]:
+    incremental = case.get("incremental")
+    expected_drift = incremental.get("expected_drift") if incremental else False
+    if expected_drift:
+        if report.get("verdict") not in {"INCONCLUSIVE", "PASS"}:
+            errors.append(
+                f"drift case verdict: expected INCONCLUSIVE or PASS, got {report.get('verdict')!r}"
+            )
+        if report.get("incremental"):
+            errors.append("drift case must not report incremental: true")
+    elif report.get("verdict") != expected["verdict"]:
         errors.append(f"verdict: expected {expected['verdict']!r}, got {report.get('verdict')!r}")
     reviewers = report.get("selected_reviewers", [])
     required_reviewers = expected.get("required_reviewers", [])
@@ -241,6 +275,33 @@ def score_report(case_id: str, report_path: Path) -> None:
             errors.append(f"missing evidence gap kind: {kind}")
     if report.get("source_unchanged") is not True:
         errors.append("source_unchanged must be true")
+
+    incremental = case.get("incremental")
+    if incremental and incremental.get("expects_incremental"):
+        if not incremental.get("expected_drift") and not report.get("incremental"):
+            errors.append("report.incremental must be true for incremental cases")
+        expected_invalidation = incremental.get("expected_invalidation", {})
+        actual_invalidation = report.get("invalidation", {})
+        for reviewer, expected_state in expected_invalidation.items():
+            actual_state = actual_invalidation.get(reviewer)
+            if actual_state != expected_state:
+                errors.append(
+                    f"invalidation[{reviewer}]: expected {expected_state!r}, got {actual_state!r}"
+                )
+        if incremental.get("expected_drift"):
+            gap_kinds = {gap.get("kind") for gap in report.get("evidence_gaps", [])}
+            if "UNAVAILABLE" not in gap_kinds:
+                errors.append("drift case must have UNAVAILABLE evidence gap")
+        if incremental.get("expected_scope_rejection"):
+            has_scope_rejection = any(
+                "out-of-target-narrowing" in str(finding.get("rejection_reason", ""))
+                for finding in report.get("findings", [])
+            )
+            if not has_scope_rejection:
+                errors.append(
+                    "scope rejection case must have at least one finding with "
+                    "rejection_reason containing 'out-of-target-narrowing'"
+                )
 
     if errors:
         raise EvaluationError("\n".join(errors))

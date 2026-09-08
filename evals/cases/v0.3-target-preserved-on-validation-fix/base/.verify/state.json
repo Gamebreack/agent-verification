@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "target_kind": "feature",
+  "target_identity": {
+    "description": "form-creation-page",
+    "in_scope": ["forms/page.py", "forms/validation.py", "forms/submission.py", "forms/api.py", "forms/test_forms.py"],
+    "out_of_scope": [],
+    "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+    "acceptance_criteria": ["R1", "R2", "R3"]
+  },
+  "baseline": {"sha": "0000000000000000000000000000000000000000", "branch": "main", "ts": "2026-09-01T00:00:00Z", "verifier_version": "0.1.0"},
+  "reviewers_used": ["acceptance", "test-adequacy", "regression", "contract-boundaries"],
+  "verdict": "PASS",
+  "evidence_paths": ["forms/test_forms.py", "forms/page.py", "forms/validation.py", "forms/submission.py", "forms/api.py"],
+  "preserved_behaviors_validated": ["P1"],
+  "contract_hash": "sha256:placeholder",
+  "reviewer_files_hashes": {
+    "acceptance": "sha256:placeholder",
+    "test-adequacy": "sha256:placeholder",
+    "regression": "sha256:placeholder",
+    "contract-boundaries": "sha256:placeholder"
+  }
+}

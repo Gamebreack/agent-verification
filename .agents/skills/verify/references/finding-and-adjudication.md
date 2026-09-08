@@ -29,10 +29,15 @@ Before adjudicating findings, validate the panel composition itself. For each se
 
 If the panel exceeds two reviewers without per-reviewer justification, surface a single panel-level `OPTIONAL` finding labeled `panel-over-selection`. If a baseline reviewer is absent without a documented reason, surface `panel-missing-baseline`. Both are advisory; they do not block `PASS` unless they correlate with a substantive defect.
 
+## Scope preservation
+
+A reviewer must report against the TARGET the user requested, not against a narrower boundary the implementation suggests. If a finding's `scope_relevance` describes a smaller surface than the user's TARGET (e.g., it cites only the latest commit, only the changed file, or only the latest diff when the user asked for the whole feature), the adjudicator rejects it as `NON_ISSUE` with reason `out-of-target-narrowing`. This rule applies to every verification regardless of mode; it exists to prevent incremental re-verification from silently narrowing assurance.
+
 ## Adjudication gate
 
 For every claim, determine:
 
+0. Does the finding's `scope_relevance` narrow the user's TARGET below what was originally requested? If yes → `NON_ISSUE` with `rejection_reason: out-of-target-narrowing`.
 1. Is the cited evidence real and attributable to the resolved target?
 2. Does the failure mechanism follow from that evidence?
 3. Is the claim relevant to a requirement, invariant, preserved behavior, constraint, or necessary release property?

@@ -58,3 +58,26 @@ Satisfied on 2026-09-04 in ChatGPT Work:
 - [x] Leave target source unchanged.
 
 Portable release still requires end-to-end `/verify` runs on seeded fixtures on at least two hosts. License decided (MIT).
+
+## Milestone 5: Incremental re-verification (v0.3)
+
+Separate TARGET (user's assurance boundary) from DELTA (changes since last verify). Incremental re-verification may shrink what evidence is recollected; it must NEVER silently narrow TARGET to the latest commit.
+
+- [x] Extend `target.kind` enum with `feature | subsystem | workflow | artifact | files`.
+- [x] Add `target.identity` block (description, in_scope, out_of_scope, anchor, acceptance_criteria).
+- [x] Per-kind resolution rules in SKILL.md §1.
+- [x] Invocation grammar supports `feature:<name>`, `subsystem:<name>`, `workflow:<name>`, `artifact:<name>`.
+- [x] State persistence schema (`.verify/state.json`) — opt-in, target-local, host-wrapped save.
+- [x] Incremental verification reference (delta computation, invalidation map, identity drift handling).
+- [x] Scope-preservation guard: adjudicator rejects reviewer output that narrows TARGET (`out-of-target-narrowing`).
+- [x] Behavioral fixtures: `v0.3-target-preserved-on-validation-fix`, `v0.3-invalidation-expands-on-grown-scope`, `v0.3-identity-drift-inconclusive`, `v0.3-empty-delta-reuses-verdict`, `v0.3-reviewer-scope-narrowing-rejected`.
+- [x] Corpus grew from 12 to 17 cases; all structurally valid; 5/5 unittests OK.
+- [ ] Cross-host reruns of v0.2 fixtures on Codex + Cursor (no regression).
+- [ ] Cross-host reruns of v0.3 fixtures on Codex + Cursor.
+
+## v0.3 gate
+
+- [x] 9 v0.2 fixtures still pass structurally; no FP/FN regression.
+- [x] 5 new v0.3 fixtures structurally valid.
+- [x] Adjudicator rejects `out-of-target-narrowing` scope_relevance.
+- [x] State persistence is opt-in and host-wrapped; skill remains read-only.

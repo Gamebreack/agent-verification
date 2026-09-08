@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "target_kind": "subsystem",
+  "target_identity": {
+    "description": "auth-subsystem",
+    "in_scope": ["auth/tenants.py", "auth/check.py", "auth/test_auth.py"],
+    "out_of_scope": [],
+    "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+    "acceptance_criteria": ["R1", "R2"]
+  },
+  "baseline": {"sha": "0000000000000000000000000000000000000000", "branch": "main", "ts": "2026-09-01T00:00:00Z", "verifier_version": "0.1.0"},
+  "reviewers_used": ["acceptance", "test-adequacy", "security"],
+  "verdict": "PASS",
+  "evidence_paths": ["auth/test_auth.py", "auth/tenants.py", "auth/check.py"],
+  "preserved_behaviors_validated": ["P1"],
+  "contract_hash": "sha256:placeholder",
+  "reviewer_files_hashes": {
+    "acceptance": "sha256:placeholder",
+    "test-adequacy": "sha256:placeholder",
+    "security": "sha256:placeholder"
+  }
+}

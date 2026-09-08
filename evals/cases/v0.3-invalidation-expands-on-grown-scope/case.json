@@ -1,0 +1,28 @@
+{
+  "id": "v0.3-invalidation-expands-on-grown-scope",
+  "title": "Adding a new endpoint expands the invalidation map to include contract boundaries",
+  "mode": "auto",
+  "task": "Re-verify the auth subsystem. Prior verification recorded a PASS. Confirm that adding a new endpoint within the subsystem invalidates the right reviewers without losing scope.",
+  "test_expectation": "pass",
+  "incremental": {
+    "target_kind": "subsystem",
+    "target_identity": {
+      "description": "auth-subsystem",
+      "in_scope": ["auth/tenants.py", "auth/check.py", "auth/audit.py", "auth/test_auth.py"],
+      "out_of_scope": [],
+      "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+      "acceptance_criteria": ["R1", "R2", "R3"]
+    },
+    "expects_incremental": true,
+    "expected_invalidation": {
+      "acceptance": "RE_RAN",
+      "test-adequacy": "RE_RAN",
+      "security": "REUSED",
+      "contract-boundaries": "RE_RAN"
+    }
+  },
+  "expected": {
+    "verdict": "PASS",
+    "max_reviewers": 5
+  }
+}

@@ -17,7 +17,9 @@ verify [auto|quick|tests|feature|full|release] [target] [--report markdown|json]
 
 - Default mode: `auto`.
 - Default target: the current working-tree diff. If clean, use the current branch against its merge base.
-- A target may be a commit, range, branch, pull request, or explicit file set.
+- A target may be:
+  - a commit, range, branch, pull request, or explicit file set (existing v0.2 forms);
+  - `feature:<name>`, `subsystem:<name>`, `workflow:<name>`, or `artifact:<name>` for an assurance-boundary target. These require `target.identity` in the Verification Contract.
 - Default report format: `markdown`. When `json` is requested, read [references/json-report.md](references/json-report.md) and return only that object.
 - Never guess a destructive or remote target. Resolve it read-only before analysis.
 
@@ -44,6 +46,25 @@ Inspect repository instructions and resolve the exact diff or artifact. Identify
 4. repository documentation and observable pre-change behavior.
 
 Do not infer product intent from the implementation. If missing intent could materially change the verdict, ask for it or return `INCONCLUSIVE`.
+
+### Target-kind resolution
+
+When `target.kind` is one of the assurance-boundary kinds, the assurance boundary is defined by `target.identity`, not by the working-tree diff. Resolution per kind:
+
+- `feature`: `identity.in_scope` enumerates the files/globs that constitute the feature; `identity.anchor` pins the verification baseline; `identity.acceptance_criteria` enumerate the requirements (R1..Rn) the feature must satisfy.
+- `subsystem`: like `feature`, but the boundary is a directory or module named by `identity.description`.
+- `workflow`: `identity.in_scope` includes every step of the workflow across modules; `identity.description` sequences the acceptance criteria in execution order.
+- `artifact`: `identity.in_scope` is the artifact itself (file or set); `identity.description` names it.
+- `files`: existing v0.2 file-glob target. No `target.identity` required.
+
+For any assurance-boundary kind, every entry in `identity.in_scope` must resolve to existing paths read-only and `identity.anchor.sha` (or `range`/`pr`) must be reachable. Otherwise ask for clarification or return `INCONCLUSIVE`.
+
+### Incremental re-verification
+
+When the target is an assurance-boundary kind (`feature`, `subsystem`, `workflow`, `artifact`), check whether a prior state file exists at `$VERIFY_STATE_PATH` (or `<cwd>/.verify/state.json`). If present and valid per [references/state-persistence.md](references/state-persistence.md):
+1. Compute the DELTA against `target_identity.in_scope`.
+2. Evaluate the invalidation map in [references/incremental-verification.md](references/incremental-verification.md) to select which reviewers must re-run versus which can reuse prior evidence.
+3. If identity drift is detected, refuse incremental mode and either perform a fresh full verification or return `INCONCLUSIVE`.
 
 ### 2. Build the Verification Contract
 
@@ -111,3 +132,5 @@ Load only the selected roles:
 - [Failure and observability](references/reviewers/failure-observability.md)
 - [Critical journey](references/reviewers/critical-journey.md)
 - [Simplification](references/reviewers/simplification.md)
+- [Incremental verification](references/incremental-verification.md)
+- [State persistence](references/state-persistence.md)

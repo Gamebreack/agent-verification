@@ -39,3 +39,35 @@ Structural validation is deterministic. Behavioral evaluation requires a model h
 Cross-host runs are release evidence, not a prerequisite for iterating on the MVP. Record the host/model/version with retained evaluation reports so regressions can be compared honestly.
 
 The latest retained run summary is [`evals/runs/2026-09-04-chatgpt-work.json`](../evals/runs/2026-09-04-chatgpt-work.json).
+
+## Incremental fixtures (v0.3)
+
+The five `v0.3-*` cases test that the skill recognises prior state, computes the delta against TARGET.in_scope, and selects which reviewers to re-run via the invalidation map. Each case ships `base/.verify/state.json` and a `candidate/` overlay. Case.json carries an optional `incremental` block:
+
+```json
+{
+  "incremental": {
+    "target_kind": "feature",
+    "target_identity": {
+      "description": "...",
+      "in_scope": ["..."],
+      "anchor": {"branch": "main", "sha": "..."},
+      "acceptance_criteria": ["R1"]
+    },
+    "expects_incremental": true,
+    "expected_invalidation": {
+      "acceptance": "RE_RAN",
+      "test-adequacy": "REUSED"
+    },
+    "expected_drift": false,
+    "expected_scope_rejection": false
+  }
+}
+```
+
+The scorer checks:
+
+- `report.incremental == true` (unless `expected_drift: true`).
+- `report.invalidation` matches `expected_invalidation` per reviewer.
+- For drift cases: verdict is `INCONCLUSIVE` (or `PASS` for fresh full), with an `UNAVAILABLE` evidence gap explaining the drift.
+- For scope-rejection cases: at least one finding has `rejection_reason` containing `out-of-target-narrowing`.

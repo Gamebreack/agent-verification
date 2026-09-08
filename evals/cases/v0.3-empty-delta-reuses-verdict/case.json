@@ -1,0 +1,27 @@
+{
+  "id": "v0.3-empty-delta-reuses-verdict",
+  "title": "An out-of-scope change reuses the prior verdict without redispatching reviewers",
+  "mode": "auto",
+  "task": "Re-verify the send-notification feature. The prior state recorded a PASS. A new README has been added outside the feature scope.",
+  "test_expectation": "pass",
+  "incremental": {
+    "target_kind": "feature",
+    "target_identity": {
+      "description": "send-notification",
+      "in_scope": ["notify/send.py", "notify/test_send.py"],
+      "out_of_scope": [],
+      "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+      "acceptance_criteria": ["R1"]
+    },
+    "expects_incremental": true,
+    "expected_invalidation": {
+      "acceptance": "REUSED",
+      "test-adequacy": "REUSED",
+      "regression": "REUSED",
+      "contract-boundaries": "REUSED"
+    }
+  },
+  "expected": {
+    "verdict": "PASS"
+  }
+}

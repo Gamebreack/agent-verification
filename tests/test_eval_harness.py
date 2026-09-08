@@ -23,6 +23,11 @@ class EvaluationHarnessTest(unittest.TestCase):
                 "v0.2-multi-trigger-bounded",
                 "v0.2-pure-formatter-no-overflow",
                 "v0.2-retry-idempotency",
+                "v0.3-empty-delta-reuses-verdict",
+                "v0.3-identity-drift-inconclusive",
+                "v0.3-invalidation-expands-on-grown-scope",
+                "v0.3-reviewer-scope-narrowing-rejected",
+                "v0.3-target-preserved-on-validation-fix",
             },
         )
 

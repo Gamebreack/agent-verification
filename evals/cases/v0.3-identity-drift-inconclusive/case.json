@@ -1,0 +1,22 @@
+{
+  "id": "v0.3-identity-drift-inconclusive",
+  "title": "Renaming a feature surface produces identity drift and refuses incremental reuse",
+  "mode": "auto",
+  "task": "Re-verify the form-creation feature. The previous state recorded a PASS for the feature located in forms/. The code has since been moved into a new directory builder/.",
+  "test_expectation": "unavailable",
+  "incremental": {
+    "target_kind": "feature",
+    "target_identity": {
+      "description": "form-creation",
+      "in_scope": ["forms/page.py", "forms/test_forms.py"],
+      "out_of_scope": [],
+      "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+      "acceptance_criteria": ["R1"]
+    },
+    "expects_incremental": true,
+    "expected_drift": true
+  },
+  "expected": {
+    "verdict": "INCONCLUSIVE"
+  }
+}

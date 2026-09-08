@@ -1,0 +1,24 @@
+{
+  "id": "v0.3-reviewer-scope-narrowing-rejected",
+  "title": "A seeded reviewer claim that narrows TARGET must be rejected as out-of-target-narrowing",
+  "mode": "auto",
+  "task": "Re-verify the form-creation-page feature. Prior state recorded a PASS.",
+  "seeded_reviewer_claim": "The change to forms/validation.py breaks email validation for non-.com addresses. Evidence: forms/validation.py:5. Severity: BLOCKER. scope_relevance: this file (validation.py).",
+  "test_expectation": "pass",
+  "incremental": {
+    "target_kind": "feature",
+    "target_identity": {
+      "description": "form-creation-page",
+      "in_scope": ["forms/page.py", "forms/validation.py", "forms/submission.py", "forms/test_forms.py"],
+      "out_of_scope": [],
+      "anchor": {"branch": "main", "sha": "0000000000000000000000000000000000000000", "range": null, "pr": null},
+      "acceptance_criteria": ["R1", "R2", "R3"]
+    },
+    "expects_incremental": true,
+    "expected_scope_rejection": true
+  },
+  "expected": {
+    "verdict": "PASS",
+    "max_reviewers": 5
+  }
+}
