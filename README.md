@@ -68,7 +68,7 @@ See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases a
 ## Evidence
 
 - **Structural validation** (`scripts/eval_harness.py validate`) is deterministic: it checks the skill package's required files, validates all 12 fixture manifests, materializes each as a real Git repository, and confirms the candidate's own tests pass without mutating the fixture source. It does not require a model.
-- **Behavioral evaluation** requires a model host, because the artifact under test is an Agent Skill that must be invoked by an agent. The latest retained behavioral run is **v0.4.0 (Claude Code, 2026-09-28): 10/12 matched, 0 false negatives, 2 over-strict verdicts** — see [`evals/runs/2026-09-28-claude-code.json`](evals/runs/2026-09-28-claude-code.json) (per-case reports alongside it). The prior run, [`evals/runs/2026-09-04-chatgpt-work.json`](evals/runs/2026-09-04-chatgpt-work.json) (skill v0.1.0, 9 cases, host ChatGPT Work), is kept as history.
+- **Behavioral evaluation** requires a model host, because the artifact under test is an Agent Skill that must be invoked by an agent. The latest retained behavioral run is **v0.4.0 (Claude Code, 2026-09-28): 10/12 matched, 0 false negatives, 2 over-strict verdicts** — see [`evals/runs/2026-09-28-claude-code.json`](evals/runs/2026-09-28-claude-code.json) (per-case reports alongside it). The prior run, [`evals/runs/2026-09-04-chatgpt-work.json`](evals/runs/2026-09-04-chatgpt-work.json) (skill v0.1.0, 9 cases, host ChatGPT Work), is kept as history. A 5-case rerun after the adjudication-policy fix matched 5/5 ([`evals/runs/2026-09-28-claude-code-rerun.json`](evals/runs/2026-09-28-claude-code-rerun.json)).
 
 ## Discovery
 
