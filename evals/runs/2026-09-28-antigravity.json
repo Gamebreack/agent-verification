@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-28",
+  "skill_version": "0.4.0",
+  "skill_commit": "c75d790",
+  "host": "Antigravity CLI `agy` 1.2.11 (`agy -p --output-format json`), model Gemini 3.8 Flash (self-reported, matches settings)",
+  "lead": "the host's own primary agent (headless invocation)",
+  "structural_validation": "PASS (12 cases)",
+  "method": {
+    "delegation_depth": 1,
+    "notes": [
+      "Invoked from the shell by a runner agent, one case at a time, with the harness `prepare` prompt plus 'Use the verify skill' and a request for the JSON report as the final message; the runner extracted the report and never adjudicated.",
+      "Reports scored with `eval_harness.py check` against re-materialized reference trees.",
+      "Fixture unittest runs left untracked __pycache__ directories; `check` did not flag them as source changes.",
+      "Per-case reports are the host's output with one redaction: the absolute eval-directory prefix in `target` (and one `checks_executed` command) replaced by `<eval-dir>/`; scores unchanged after redaction."
+    ]
+  },
+  "summary": {"cases": 12, "matched": 10, "mismatched": 2, "false_negatives": 0, "false_positives_or_over_strict": 0, "other": 2},
+  "behavioral_cases": [
+    {"id": "correct-low-risk", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "no findings recorded on a correct low-risk change"},
+    {"id": "acceptance-omission", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "format_profile omits last_name and fails to trim/join names; test_profile.py asserts the broken output"},
+    {"id": "bogus-mock", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "final_price returns subtotal directly with no tax applied; test_price.py mocks the function under test"},
+    {"id": "boundary-inversion", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "within_slot_limit returns False at active_slots == purchased_slots (slots.py:4), violating R1/I1; no boundary test"},
+    {"id": "contract-regression", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "get_user replaces 'name' with 'display_name', breaking render_user (consumer.py) with a KeyError; test rewritten to match the break"},
+    {"id": "duplicate-event", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "FAIL", "note": "verdict FIX REQUIRED correct; BLOCKER at history.py:6 (unconditional append on repeated event_id) - the defect was detected; the harness's expected-finding concept `non-idempotent-record` did not match the report's vocabulary"},
+    {"id": "speculative-non-issue", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "seeded 'must use regex, O(n) is invalid' claim rejected as NON_ISSUE"},
+    {"id": "tenant-authorization", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "can_view allows cross-tenant access when both tenant identifiers are present but different; no cross-tenant or missing-resource-tenant test"},
+    {"id": "unavailable-service", "assurance": "degraded independence", "verdict": "INCONCLUSIVE", "check": "PASS", "note": "degraded independence reported directly; no findings recorded, correctly withholding a pass on unavailable evidence"},
+    {"id": "v0.2-multi-trigger-bounded", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "only NON_ISSUE test-strength gaps recorded (equality-boundary coverage, success-only response-shape assertion); the 'remaining exposes current' claim was itself recorded NON_ISSUE, not validated"},
+    {"id": "v0.2-pure-formatter-no-overflow", "assurance": "independent panel", "verdict": "PASS", "check": "FAIL", "note": "verdict PASS correct; invariants reviewer selected on a pure formatter with no declared invariant (forbidden by the case)"},
+    {"id": "v0.2-retry-idempotency", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "no findings recorded on a correct idempotent-dedupe change"}
+  ],
+  "observed_host_behaviors": [
+    "independent panel on 11/12; unavailable-service reported `degraded independence`",
+    "4/12 responses contained several concatenated/revised JSON reports; the last complete one was taken",
+    "skill resolution is by frontmatter `name`; a stale copy with the same name shadowed the symlink until moved out of the skills directory",
+    "no permission prompts (host setting: always-proceed); workspace confinement blocks writes outside cwd"
+  ],
+  "observed_skill_behaviors": [
+    "Over-inclusive invariants trigger on pure-formatter (also seen on OpenCode)"
+  ],
+  "remaining_release_evidence": [
+    "Decide whether the invariants trigger in panel.md is too loose (pure-formatter over-selection on 2 of 3 hosts)",
+    "Decide whether the harness finding-concept vocabulary for duplicate-event should accept 'duplicate entries on repeated event_id'"
+  ]
+}

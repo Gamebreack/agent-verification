@@ -23,7 +23,7 @@ Escalate and say so: if `quick` is requested and a surface is `high` or `critica
 | Concurrency, retries, idempotency, duplicate delivery, async jobs, queues, external dependency failure, partial failure | invariants | race/idempotency evidence, failure-path tests, silent-failure analysis |
 | Authentication, authorization, tenancy, sessions, secrets, sensitive data, input validation at trust boundaries, admin paths, cryptography | security | negative authorization tests, threat model, static analysis |
 
-Editing a function body is not by itself a regression trigger; the trigger is a consumer or persisted surface that could observe the difference. A pure function is not by itself a cross-boundary journey. Triggers are concrete changed surfaces, not generic risk language.
+Editing a function body is not by itself a regression trigger; the trigger is a consumer or persisted surface that could observe the difference. A pure function is not by itself a cross-boundary journey. Triggers are concrete changed surfaces, not generic risk language. A numeric parameter, a format width, or a statement of the input type is not by itself an invariants trigger; the trigger is a range, boundary, ordering, or state rule that the contract requires the change to hold. Speculating about inputs the contract excludes is not a trigger.
 
 ## Risk bands
 

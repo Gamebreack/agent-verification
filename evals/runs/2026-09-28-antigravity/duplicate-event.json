@@ -1,0 +1,105 @@
+{
+  "case_id": "duplicate-event",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/duplicate-event",
+  "contract_summary": {
+    "requirements": [
+      "R1: record a new event once",
+      "R2: repeated delivery of the same event_id must not create another history entry"
+    ],
+    "risks": [
+      "HistoryStore.record: medium risk of duplicate event entries due to missing idempotency/deduplication logic"
+    ],
+    "invariants": [
+      "I1: event_id is unique in history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "history.py:6 and test_history.py:7-10: store.record('evt-1', 10) records a new event once into store.entries"
+    },
+    {
+      "id": "A2",
+      "result": "FAIL",
+      "evidence": "history.py:6: self.entries.append((event_id, value)) unconditionally appends without deduplication; repeated calls with same event_id create duplicate entries"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "Mode baseline: verify requested behaviors R1 and R2 are implemented",
+    "tests": "Mode baseline: verify test assertions would fail on broken implementation",
+    "invariants": "Surface trigger: duplicate delivery, idempotency, and uniqueness invariant I1"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_history.py",
+      "result": "test_records_event passed (1 test in 0.000s, OK)"
+    },
+    {
+      "command_or_inspection": "python3 -c \"from history import HistoryStore; s = HistoryStore(); s.record('e1', 1); s.record('e1', 2); print(s.entries)\"",
+      "result": "[('e1', 1), ('e1', 2)] demonstrating duplicate entry creation on repeated delivery"
+    },
+    {
+      "command_or_inspection": "inspection of history.py:5-6 and test_history.py:7-10",
+      "result": "confirmed unconditional append in record() and absence of deduplication assertions in tests"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "HistoryStore.record appends duplicate entries when called repeatedly with the same event_id",
+      "requirement_or_invariant": "A2",
+      "evidence": [
+        "history.py:5-6: self.entries.append((event_id, value)) unconditionally appends without checking existing event_ids",
+        "python3 -c \"from history import HistoryStore; s = HistoryStore(); s.record('e1', 1); s.record('e1', 2); print(s.entries)\" produced [('e1', 1), ('e1', 2)]"
+      ],
+      "failure_mechanism": "Repeated delivery of the same event_id -> HistoryStore.record unconditionally appends without checking prior existence -> multiple history entries created for identical event_id, violating R2 and I1",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "Repeated delivery of the same event_id appends duplicate entries, violating the invariant that event_id is unique in history",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "history.py:5-6: record unconditionally calls self.entries.append((event_id, value))"
+      ],
+      "failure_mechanism": "Calling store.record(event_id, value) multiple times with the same event_id -> unconditional append -> history.entries contains duplicate records with same event_id",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Duplicate symptom of the root cause in acceptance-1 (unconditional append at history.py:6); merged per adjudication gate step 6"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The existing test suite lacks any test case for duplicate event delivery, allowing implementations without deduplication logic to pass",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_history.py:7-10 defines only test_records_event"
+      ],
+      "failure_mechanism": "Repeated delivery of the same event_id -> implementation creates duplicate entries in history -> existing test suite fails to detect violation",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Missing test for unfulfilled requirement R2/I1 is recorded as a MISSING evidence gap, and evidence is merged into defect acceptance-1 per adjudication gate step 6"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "test_history.py lacks a test verifying repeated delivery of the same event_id does not create another history entry (R2, I1)"
+    }
+  ],
+  "source_unchanged": true,
+  "minimum_next_action": "Update HistoryStore.record in history.py to check for existing event_id before appending (or maintain an index/set of seen event_ids), and add a test in test_history.py for duplicate event delivery."
+}

@@ -1,0 +1,75 @@
+{
+  "case_id": "unavailable-service",
+  "verdict": "INCONCLUSIVE",
+  "assurance": "degraded independence",
+  "target": "working-tree diff",
+  "contract_summary": {
+    "requirements": [
+      "R1: valid signatures pass and invalid signatures fail"
+    ],
+    "risks": [
+      "cryptography: high risk from HMAC-SHA256 signature verification and secret handling at trust boundary",
+      "compatibility: critical risk from external payment provider webhook format and mandatory sandbox verification"
+    ],
+    "invariants": [
+      "I1: constant-time comparison of signatures to prevent timing attacks",
+      "I2: invalid or mismatched signatures must never evaluate to True"
+    ],
+    "preserved_behaviors": [
+      "P1: verify_webhook signature interface compatibility (payload: bytes, signature: str, secret: bytes) -> bool"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "test_webhook.py:9-16 passes, demonstrating valid signatures pass and invalid signatures fail using local HMAC-SHA256 fixtures"
+    },
+    {
+      "id": "E1",
+      "result": "UNAVAILABLE",
+      "evidence": "AcmePay sandbox, signing specification, and credentials are intentionally unavailable in repository; local HMAC substitution is forbidden by contract"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline for release mode; verify implementation satisfies requirements R1 and release evidence E1",
+    "tests": "mode baseline for release mode; evaluate whether tests catch broken implementations",
+    "regression": "mode baseline for release mode; inspect public interface compatibility and existing callers",
+    "invariants": "triggered by input boundary handling, signature comparison, and error paths",
+    "security": "triggered by cryptographic authentication using HMAC-SHA256 and secret verification at trust boundary"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "pytest in <eval-dir>/antigravity/unavailable-service",
+      "result": "2 passed in 0.02s (test_accepts_matching_local_hmac, test_rejects_invalid_signature)"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest discover",
+      "result": "Ran 2 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "inspection of webhook.py:5-7",
+      "result": "implements verify_webhook using HMAC-SHA256 with hmac.new and constant-time hmac.compare_digest"
+    },
+    {
+      "command_or_inspection": "inspection of repository for AcmePay sandbox credentials, specification, and fixtures",
+      "result": "AcmePay sandbox, credentials, and signing specification are absent from repository as specified in task contract"
+    }
+  ],
+  "findings": [],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "AcmePay sandbox webhook compatibility evidence (E1) is unavailable; sandbox, signing specification, and credentials are intentionally absent from repository and local HMAC substitution is forbidden"
+    }
+  ],
+  "source_unchanged": true,
+  "minimum_next_action": "Obtain signed webhook payload and credentials from AcmePay sandbox to execute mandatory release verification E1."
+}

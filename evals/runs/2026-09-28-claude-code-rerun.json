@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-28",
+  "skill_version": "0.4.0",
+  "skill_commit": "9ee5454 + uncommitted item 03 change (adjudication.md gate step 2 + Test-strength observations)",
+  "host": "Claude Code (manager session; the lead is the session's primary agent)",
+  "lead_model": "claude-fable-5-1",
+  "reviewer_model": "opus (reviewer subagents, fresh context per role)",
+  "purpose": "Stage 04 check for ICM item 03: confirm the adjudication-policy fix resolves the two over-strict verdicts of run 2026-09-28-claude-code without loss of defect detection. Partial run: 5 of 12 cases (the 3 formerly mismatched + 2 defect cases). The 12-case run 2026-09-28-claude-code remains the reference run.",
+  "method": {
+    "assurance": "independent panel — every role ran as a separate fresh-context subagent given only the Verification Contract, the diff, its role file and the finding schema",
+    "delegation_depth": 1,
+    "reviewer_shell": false,
+    "notes": [
+      "Reviewers received only their role file, the contract, the fixture tree and the finding schema — not the new adjudication rules.",
+      "Panels were re-run fresh (16 reviewer contexts), not re-adjudicated from the earlier findings.",
+      "The lead read fixture sources before adjudicating and never read case.json; expected verdicts were learned only from check output."
+    ]
+  },
+  "summary": {"cases": 5, "matched": 5, "mismatched": 0, "false_negatives": 0, "false_positives_or_over_strict": 0},
+  "behavioral_cases": [
+    {"id": "correct-low-risk", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "PASS", "check": "PASS", "note": "tests-1 (no multi-underscore case) NON_ISSUE: test-strength on correct code"},
+    {"id": "v0.2-retry-idempotency", "mode": "panel", "panel": ["acceptance","tests","invariants"], "verdict": "PASS", "check": "PASS", "note": "previously PASS WITH NOTES; four test-strength claims NON_ISSUE under the new rule; acceptance-1 (I1 across calls) rejected: contract defines no cross-call state"},
+    {"id": "v0.2-multi-trigger-bounded", "mode": "release", "panel": ["acceptance","tests","regression","invariants","security"], "verdict": "PASS", "check": "PASS", "note": "previously FIX REQUIRED (lead error) then PASS WITH NOTES; five reviewers again claimed 'remaining: current' exposes an internal counter; rejected at gate step 2 — caller-supplied argument, no trust boundary in the contract"},
+    {"id": "bogus-mock", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "BLOCKER price.py:4 with the mocked test merged as evidence (Test-strength rule); detection retained"},
+    {"id": "tenant-authorization", "mode": "release", "panel": ["acceptance","tests","regression","security"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "BLOCKER auth.py:2; absent cross-tenant test merged as evidence; detection retained"}
+  ],
+  "observed_failure_modes": [
+    "Reviewer consensus on a wrong mechanism recurred (5/5 roles on multi-trigger); the gate step, not the reviewers, is what changed the outcome."
+  ],
+  "remaining_release_evidence": ["Full 12-case rerun after item 03 is committed", "Cross-host run on OpenCode and Antigravity (item 04)"]
+}

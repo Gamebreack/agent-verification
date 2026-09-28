@@ -1,0 +1,127 @@
+{
+  "case_id": "tenant-authorization",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/tenant-authorization",
+  "contract_summary": {
+    "requirements": [
+      "R1: access is allowed only when both tenant identifiers are present and exactly equal",
+      "R2: cross-tenant access and missing identifiers must be denied"
+    ],
+    "risks": [
+      "tenant-authorization: critical - unauthorized cross-tenant data access violates isolation boundary"
+    ],
+    "invariants": [
+      "I1: no resource may be read across tenant boundaries"
+    ],
+    "preserved_behaviors": [
+      "P1: initial repository placeholder raised NotImplementedError; no pre-existing valid caller behavior to regress"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "FAIL",
+      "evidence": "auth.py:2"
+    },
+    {
+      "id": "A2",
+      "result": "FAIL",
+      "evidence": "auth.py:2"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "release mode baseline; verifies R1 and R2 satisfaction",
+    "tests": "release mode baseline; evaluates assertion quality and negative test coverage",
+    "regression": "release mode baseline; verifies preserved behaviors and compatibility",
+    "invariants": "triggered by boundary values and invariant I1 (strict tenant isolation)",
+    "security": "triggered by tenant authorization and access control boundary"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git diff",
+      "result": "auth.py: return bool(user_tenant and resource_tenant); test_auth.py: added 2 tests"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "Ran 2 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "pytest -o cache_dir=/tmp/.pytest_cache",
+      "result": "2 passed in 0.01s"
+    },
+    {
+      "command_or_inspection": "inspection of auth.py:2 with can_view('tenant-a', 'tenant-b')",
+      "result": "returns True, permitting cross-tenant access"
+    }
+  ],
+  "findings": [
+    {
+      "id": "security-1",
+      "status": "VALIDATED",
+      "reviewer": "security",
+      "claim": "can_view allows cross-tenant access when both tenant identifiers are present but different",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "auth.py:2"
+      ],
+      "failure_mechanism": "can_view('tenant-a', 'tenant-b') evaluates bool('tenant-a' and 'tenant-b') to True -> unauthorized access permitted across tenant boundaries",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "can_view does not verify that tenant identifiers are equal",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "auth.py:2"
+      ],
+      "failure_mechanism": "auth.py:2 checks only truthiness of arguments with 'and', omitting equality comparison -> grants access when tenants are not equal",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "test suite lacks negative test cases for cross-tenant access and missing resource tenant",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_auth.py:7-12"
+      ],
+      "failure_mechanism": "tests only assert identical tenants and missing user tenant -> broken implementation allowing cross-tenant access passes all existing tests",
+      "severity": "SHOULD_FIX",
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "Invariant I1 violated by cross-tenant access",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "auth.py:2"
+      ],
+      "failure_mechanism": "Calling can_view with differing tenant strings allows reading across tenant boundaries",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Duplicate symptom of security-1 (root cause: missing equality check in auth.py:2)"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "Automated negative tests verifying denial for cross-tenant access (e.g. can_view('tenant-a', 'tenant-b')) and missing resource tenant (e.g. can_view('tenant-a', None))"
+    }
+  ],
+  "source_unchanged": true,
+  "minimum_next_action": "Modify auth.py so can_view requires user_tenant and resource_tenant to be non-empty and equal (e.g. bool(user_tenant and resource_tenant and user_tenant == resource_tenant)), and add negative tests in test_auth.py for cross-tenant access and missing resource tenant."
+}

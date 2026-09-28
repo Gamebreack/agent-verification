@@ -1,0 +1,112 @@
+{
+  "case_id": "v0.2-retry-idempotency",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/opencode/v0.2-retry-idempotency",
+  "contract_summary": {
+    "requirements": [
+      "R1: return events with duplicate ids removed",
+      "R2: preserve first-seen order"
+    ],
+    "risks": [
+      "dedupe.dedupe function: low — pure function with no external boundaries, no I/O, no shared state"
+    ],
+    "invariants": [
+      "I1: repeated delivery of the same event id must not create duplicate history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "dedupe.py:4-7 skips events whose id is already in seen; test_dedupe.py:14 asserts len(result)==2 for input with duplicate id 1"
+    },
+    {
+      "id": "A2",
+      "result": "PASS",
+      "evidence": "dedupe.py:4-7 appends events in iteration order on first sight; test_dedupe.py:15 asserts returned ids are [1, 2]"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "baseline (panel mode)",
+    "tests": "baseline (panel mode)",
+    "invariants": "trigger: idempotency/duplicate delivery"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python -m unittest test_dedupe -v",
+      "result": "3 tests ran, all OK"
+    },
+    {
+      "command_or_inspection": "git diff --stat",
+      "result": "2 files changed, 24 insertions, 4 deletions"
+    },
+    {
+      "command_or_inspection": "Read dedupe.py and test_dedupe.py",
+      "result": "Implementation uses seen-set with first-occurrence retention; tests cover duplicate removal, empty input, and no-duplicate pass-through"
+    }
+  ],
+  "findings": [
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "dedupe silently treats distinct ids of different types as duplicates when they compare equal (e.g., int 1 and float 1.0), suppressing what may be semantically distinct events.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "dedupe.py:5-6 uses Python set membership which relies on __hash__ and __eq__; hash(1)==hash(1.0) and 1==1.0 in Python"
+      ],
+      "failure_mechanism": "caller delivers two events with ids equal under Python equality but different types -> set deduplication collapses them -> one event is lost",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Contract says 'duplicate ids' without specifying type sensitivity; Python equality (1==1.0) is the natural interpretation. Contract ambiguity, not a defect."
+    },
+    {
+      "id": "invariants-2",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "unhashable id values raise TypeError and abort deduplication, so the function cannot maintain I1 for that input.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "dedupe.py:5-6 stores event['id'] in a set; unhashable types such as list or dict raise TypeError"
+      ],
+      "failure_mechanism": "event id is a mutable container -> seen.add fails -> exception propagates -> no deduplicated result is produced",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Contract assumes events have deduplicable ids; unhashable ids are outside scope. Function fails loudly (TypeError), not silently."
+    },
+    {
+      "id": "invariants-3",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "events without an 'id' key raise KeyError and abort deduplication, preventing the function from applying R1, R2, or I1 to the stream.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "dedupe.py:5 reads event['id'] unconditionally; dedupe([{'value':'a'}]) raises KeyError"
+      ],
+      "failure_mechanism": "malformed event lacks the expected id field -> KeyError -> function aborts -> caller receives no deduplicated result",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Contract assumes events have ids; malformed events are outside scope. Function fails loudly (KeyError), not silently."
+    },
+    {
+      "id": "invariants-4",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "the required evidence relies on a single enumerated example, so it cannot prove that I1 and R2 hold across the input space.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_dedupe.py:7-15 only exercises one duplicate pattern ([1,2,1])"
+      ],
+      "failure_mechanism": "passing hand-picked examples do not rule out edge cases that could violate invariants",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Test-strength on correct code. Tests reviewer confirmed all material mutations are caught. Contract's required evidence is satisfied."
+    }
+  ],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": null
+}

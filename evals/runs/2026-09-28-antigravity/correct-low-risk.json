@@ -1,0 +1,53 @@
+{
+  "case_id": "correct-low-risk",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/correct-low-risk",
+  "contract_summary": {
+    "requirements": [
+      "R1: convert a lowercase snake_case status into title-cased words (inputs contain only lowercase ASCII letters and underscores)"
+    ],
+    "risks": [
+      "status.py: low (pure string formatting function with no external consumers or persisted state)"
+    ],
+    "invariants": [
+      "I1: inputs contain only lowercase ASCII letters and underscores"
+    ],
+    "preserved_behaviors": [
+      "P1: preserve existing behavior for one-word values"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "test_status.py:8 (test_snake_case: display_status('in_progress') == 'In Progress')"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "Mode baseline: verify requested snake_case to title-case conversion and preserved single-word behavior",
+    "tests": "Mode baseline: verify unit tests meaningfully assert expected behavior and would catch regressions"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest discover -v",
+      "result": "Ran 2 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "pytest",
+      "result": "2 passed, 1 warning in 0.01s"
+    },
+    {
+      "command_or_inspection": "ruff check --no-cache .",
+      "result": "All checks passed!"
+    }
+  ],
+  "findings": [],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "None required; verification passed."
+}

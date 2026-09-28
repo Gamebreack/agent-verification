@@ -211,6 +211,38 @@ class EvaluationHarnessTest(unittest.TestCase):
         with self.assertRaises(eval_harness.EvaluationError):
             eval_harness.validate_manifest("bad-bound", case)
 
+    def test_adjudication_reference_states_evidence_and_test_strength_rules(self) -> None:
+        adjudication_path = (
+            Path(__file__).resolve().parent.parent
+            / ".agents"
+            / "skills"
+            / "verify"
+            / "references"
+            / "adjudication.md"
+        )
+        text = adjudication_path.read_text(encoding="utf-8")
+        self.assertIn("evidence alone", text)
+        self.assertIn("share a premise", text)
+        self.assertIn("caller supplied", text)
+        self.assertIn("Test-strength observations", text)
+        self.assertIn("test-strength on correct code", text)
+        line_count = len(text.splitlines())
+        self.assertLess(line_count, 200)
+
+    def test_panel_reference_states_invariants_trigger_guard(self) -> None:
+        panel_path = (
+            Path(__file__).resolve().parent.parent
+            / ".agents"
+            / "skills"
+            / "verify"
+            / "references"
+            / "panel.md"
+        )
+        text = panel_path.read_text(encoding="utf-8")
+        self.assertIn("not by itself an invariants trigger", text)
+        line_count = len(text.splitlines())
+        self.assertLess(line_count, 200)
+
     def test_validate_manifest_rejects_a_retired_reviewer_role(self) -> None:
         case = {
             "id": "bad-reviewer",

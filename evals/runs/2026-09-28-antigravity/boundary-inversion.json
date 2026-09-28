@@ -1,0 +1,126 @@
+{
+  "case_id": "boundary-inversion",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/boundary-inversion",
+  "contract_summary": {
+    "requirements": [
+      "R1: return true when active slots are less than or equal to purchased slots",
+      "R2: reject negative values"
+    ],
+    "risks": [
+      "slots.py: medium - capacity boundary logic and input validation"
+    ],
+    "invariants": [
+      "I1: active_slots == purchased_slots is valid capacity, not overflow"
+    ],
+    "preserved_behaviors": [
+      "P1: non-negative slot counts within limit return boolean status"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "FAIL",
+      "evidence": "slots.py:4: within_slot_limit(3, 3) evaluates to False via strict inequality active_slots < purchased_slots"
+    },
+    {
+      "id": "A2",
+      "result": "PASS",
+      "evidence": "slots.py:2-3: raises ValueError for negative values, verified by test_slots.py:13-15"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "baseline role required for all panel verifications to verify requested behaviors and criteria",
+    "tests": "baseline role required for all panel verifications to verify test assertions and mutation sensitivity",
+    "invariants": "triggered by numeric boundary, capacity limits, and equality invariant I1"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git diff",
+      "result": "Identified modifications in slots.py and test_slots.py"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest test_slots.py",
+      "result": "Ran 3 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "python3 -c \"from slots import within_slot_limit; print('equal:', within_slot_limit(3, 3)); print('below:', within_slot_limit(2, 3)); print('above:', within_slot_limit(4, 3))\"",
+      "result": "equal: False, below: True, above: False"
+    },
+    {
+      "command_or_inspection": "git status",
+      "result": "Working tree unchanged by verification run"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "within_slot_limit returns False when active_slots == purchased_slots, failing requirement R1 and criterion A1",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "slots.py:4",
+        "python3 -c \"from slots import within_slot_limit; print(within_slot_limit(3, 3))\" returned False"
+      ],
+      "failure_mechanism": "active_slots == purchased_slots -> active_slots < purchased_slots evaluates to False -> valid capacity at the limit is incorrectly reported as exceeding purchased slots",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "VALIDATED",
+      "reviewer": "invariants",
+      "claim": "within_slot_limit returns False when active_slots == purchased_slots, violating invariant I1",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "slots.py:4",
+        "python3 -c \"from slots import within_slot_limit; print(within_slot_limit(3, 3))\" returned False"
+      ],
+      "failure_mechanism": "active_slots == purchased_slots -> active_slots < purchased_slots evaluates to False -> exact capacity is treated as overflow, violating invariant I1",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "Test suite lacks boundary assertions for active_slots == purchased_slots, permitting boundary inversion defect in slots.py:4 to pass all tests",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_slots.py:7-15",
+        "python3 -m unittest test_slots.py exited 0 despite boundary failure"
+      ],
+      "failure_mechanism": "Boundary shift from <= to < -> test_slots.py only tests active_slots < purchased_slots and active_slots > purchased_slots -> defective boundary implementation survives testing without failure",
+      "severity": "SHOULD_FIX",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The test suite does not verify rejection of negative purchased_slots",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_slots.py:13-15"
+      ],
+      "failure_mechanism": "purchased_slots < 0 check omitted from tests",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "test-strength on correct code: purchased_slots < 0 is verified rejected by inspection of slots.py:2"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "Test case for active_slots == purchased_slots boundary condition in test_slots.py"
+    }
+  ],
+  "source_unchanged": true,
+  "minimum_next_action": "Change 'return active_slots < purchased_slots' to 'return active_slots <= purchased_slots' in slots.py:4 and add a test case verifying within_slot_limit(n, n) is True in test_slots.py."
+}

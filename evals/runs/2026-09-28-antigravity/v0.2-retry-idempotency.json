@@ -1,0 +1,64 @@
+{
+  "case_id": "v0.2-retry-idempotency",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/v0.2-retry-idempotency",
+  "contract_summary": {
+    "requirements": [
+      "R1: return events with duplicate ids removed",
+      "R2: preserve first-seen order"
+    ],
+    "risks": [
+      "dedupe: low - pure in-memory event deduplication"
+    ],
+    "invariants": [
+      "I1: repeated delivery of the same event id must not create duplicate history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "result": "PASS",
+      "evidence": "dedupe.py:5-7"
+    },
+    {
+      "id": "R2",
+      "result": "PASS",
+      "evidence": "dedupe.py:3-7"
+    },
+    {
+      "id": "I1",
+      "result": "PASS",
+      "evidence": "dedupe.py:5-7"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline: verify dedupe(events) satisfies R1, R2, and I1",
+    "tests": "mode baseline: verify test assertions meaningfully test deduplication and first-seen ordering",
+    "invariants": "triggered by idempotency, duplicate delivery, and first-seen ordering requirements (I1, R2)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest test_dedupe.py",
+      "result": "Ran 3 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "git diff",
+      "result": "dedupe.py and test_dedupe.py modified"
+    },
+    {
+      "command_or_inspection": "inspection of dedupe.py",
+      "result": "dedupe function accurately filters duplicate ids and preserves first-seen order"
+    }
+  ],
+  "findings": [],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "none; change is verified and ready to merge"
+}
