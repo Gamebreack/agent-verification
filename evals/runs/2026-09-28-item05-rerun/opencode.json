@@ -1,0 +1,44 @@
+{
+  "case_id": "v0.2-pure-formatter-no-overflow",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff (format_id.py, test_format_id.py)",
+  "contract_summary": {
+    "requirements": ["R1: return 'id-' followed by a 4-digit zero-padded representation of value"],
+    "risks": ["format_id function: low risk — pure function, no external dependencies, no consumers in repo"],
+    "invariants": ["I1: For all non-negative integers, output = 'id-' + str(value).zfill(4)"],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {"id": "A1", "result": "PASS", "evidence": "format_id.py:2 implements return f\"id-{value:04d}\"; test_format_id.py:7-14 verifies format_id(7)='id-0007', format_id(42)='id-0042', format_id(0)='id-0000'"}
+  ],
+  "selected_reviewers": ["acceptance", "tests"],
+  "selection_reasons": {
+    "acceptance": "baseline role for panel mode",
+    "tests": "baseline role for panel mode; test files changed"
+  },
+  "checks_executed": [
+    {"command_or_inspection": "git diff HEAD", "result": "format_id.py changed from raise NotImplementedError to return f\"id-{value:04d}\"; test_format_id.py changed from placeholder to 3 unit tests"},
+    {"command_or_inspection": "python -m unittest test_format_id -v", "result": "3 tests passed (test_formats_with_padding, test_formats_larger_value, test_formats_zero)"},
+    {"command_or_inspection": "find . -type f -not -path './.git/*'", "result": "Only format_id.py, test_format_id.py, and .verify-eval/task.md exist; no callers or consumers"}
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The existing tests do not exercise non-negative integers with 3 or more digits, so an implementation that correctly formats small values but truncates or under-pads values >= 100 would pass all tests while violating invariant I1.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_format_id.py:7-14 tests only format_id(7), format_id(42), and format_id(0)",
+        "format_id.py:2 uses f\"id-{value:04d}\", which is correct for all non-negative integers"
+      ],
+      "failure_mechanism": "input value >= 10000 -> implementation truncates modulo 10000 -> output no longer equals 'id-' + str(value).zfill(4)",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "test-strength on correct code: the lead verified by reading that f\"id-{value:04d}\" is correct for all non-negative integers; the tests are weak but the behavior is correct"
+    }
+  ],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": null
+}

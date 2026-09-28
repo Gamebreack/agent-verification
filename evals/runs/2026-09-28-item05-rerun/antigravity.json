@@ -1,0 +1,49 @@
+{
+  "case_id": "v0.2-pure-formatter-no-overflow",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/rerun-05/antigravity/v0.2-pure-formatter-no-overflow",
+  "contract_summary": {
+    "requirements": [
+      "R1: return 'id-' followed by a 4-digit zero-padded representation of value for non-negative integer inputs"
+    ],
+    "risks": [
+      "format_id: low risk pure formatting function without external consumers or state"
+    ],
+    "invariants": [],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "result": "PASS",
+      "evidence": "format_id.py:2 and test_format_id.py:7-14 ('python3 -m unittest discover' passed 3 tests)"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline for panel mode",
+    "tests": "mode baseline for panel mode"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git diff",
+      "result": "format_id.py updated to return f'id-{value:04d}'; test_format_id.py updated with test cases for 0, 7, and 42"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest discover",
+      "result": "Ran 3 tests in 0.000s; OK"
+    },
+    {
+      "command_or_inspection": "git status",
+      "result": "working tree clean with respect to verification artifacts; source unchanged"
+    }
+  ],
+  "findings": [],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "none"
+}

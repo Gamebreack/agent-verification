@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-28",
+  "skill_version": "0.4.0",
+  "skill_commit": "e924219 + uncommitted item 05 change (panel.md invariants guard)",
+  "purpose": "Stage 04 check for ICM item 05: confirm the invariants-trigger guard stops over-selection on v0.2-pure-formatter-no-overflow on all three hosts. Single case, three hosts.",
+  "hosts": [
+    {
+      "host": "Claude Code (manager session; opus reviewer subagents)",
+      "assurance": "independent panel",
+      "panel": ["acceptance", "tests"],
+      "verdict": "PASS",
+      "check": "PASS",
+      "note": "both reviewers NO FINDINGS; selection made by the lead under the new guard"
+    },
+    {
+      "host": "OpenCode 2.0.18 (opencode run --format json --auto)",
+      "assurance": "independent panel",
+      "panel": ["acceptance", "tests"],
+      "verdict": "PASS",
+      "check": "PASS",
+      "selection_reasons": {
+        "acceptance": "baseline role for panel mode",
+        "tests": "baseline role for panel mode; test files changed"
+      },
+      "note": "third attempt; attempts 1 and 2 (driven by a runner that backgrounded the process) ended after ~28 s and ~212 s with no report and no error output; no verdict was produced or discarded"
+    },
+    {
+      "host": "Antigravity CLI agy 1.2.11, Gemini 3.8 Flash",
+      "assurance": "independent panel",
+      "panel": ["acceptance", "tests"],
+      "verdict": "PASS",
+      "check": "PASS",
+      "selection_reasons": {
+        "acceptance": "mode baseline for panel mode",
+        "tests": "mode baseline for panel mode"
+      },
+      "note": "single attempt, 160 s"
+    }
+  ],
+  "summary": {"cases": 1, "hosts": 3, "matched": 3, "mismatched": 0},
+  "before_fix": "run 2026-09-28: OpenCode and Antigravity both selected invariants (forbidden) citing 'numeric ranges'/'boundary'",
+  "method": {
+    "notes": [
+      "Host reports are the host's output with the eval-directory prefix redacted to <eval-dir>/; scores unchanged",
+      "Hosts loaded the edited panel.md live through user-wide symlinks; confirmed by grep before invocation"
+    ]
+  },
+  "remaining_release_evidence": ["Full 12-case rerun on all hosts against the committed skill"]
+}
