@@ -7,3 +7,4 @@ work item progressing through stages/ or completed and recorded in done.md.
 |---|---|---|
 | 02 | Behavioral evaluation of v0.4 on Claude Code (12 fixtures) | review |
 | 03 | Adjudication-policy fixes from run 2026-09-28 (consensus ≠ evidence; test-strength threshold) | review |
+| 04 | Cross-host behavioral run (OpenCode, Antigravity) — 12 cases each | review |

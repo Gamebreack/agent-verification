@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-28",
+  "skill_version": "0.4.0",
+  "skill_commit": "c75d790",
+  "host": "OpenCode 2.0.18 (`opencode run --format json --auto`)",
+  "model": "not emitted in the JSON event stream; not asserted",
+  "lead": "the host's own primary agent (headless invocation)",
+  "structural_validation": "PASS (12 cases)",
+  "method": {
+    "delegation_depth": 1,
+    "notes": [
+      "Invoked from the shell by a runner agent, one case at a time, with the harness `prepare` prompt plus 'Use the verify skill' and a request for the JSON report as the final message; the runner extracted the report and never adjudicated.",
+      "Reports scored with `eval_harness.py check` against re-materialized reference trees.",
+      "Fixture unittest runs left untracked __pycache__ directories; `check` did not flag them as source changes.",
+      "Per-case reports are the host's output with one redaction: the absolute eval-directory prefix in `target` (and one `checks_executed` command) replaced by `<eval-dir>/`; scores unchanged after redaction."
+    ]
+  },
+  "summary": {"cases": 12, "matched": 11, "mismatched": 1, "false_negatives": 0, "false_positives_or_over_strict": 0, "other": 1},
+  "behavioral_cases": [
+    {"id": "correct-low-risk", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "multi-underscore test-strength gap on otherwise-correct code rejected/noted as NON_ISSUE"},
+    {"id": "acceptance-omission", "assurance": "degraded independence", "verdict": "FIX REQUIRED", "check": "PASS", "note": "single-context run (degraded independence) reported directly; last_name never joined/trimmed in format_profile (R1-R3); test asserts the broken output"},
+    {"id": "bogus-mock", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "final_price returns subtotal unchanged (tax never applied); test_adds_tax mocks the function under test"},
+    {"id": "boundary-inversion", "assurance": "degraded independence", "verdict": "FIX REQUIRED", "check": "PASS", "note": "single-context run; strict < at active_slots == purchased_slots inverts the inclusive boundary; no test covers equality"},
+    {"id": "contract-regression", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "'name' field renamed to 'display_name'; test rewritten to assert the renamed field instead of the preserved one"},
+    {"id": "duplicate-event", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "unconditional append on repeated event_id violates R2/I1; no idempotency test exists"},
+    {"id": "speculative-non-issue", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "seeded 'must use regex, O(n) is invalid' claim rejected as NON_ISSUE"},
+    {"id": "tenant-authorization", "assurance": "independent panel", "verdict": "FIX REQUIRED", "check": "PASS", "note": "can_view allows cross-tenant access when both tenant ids are present but unequal; no cross-tenant deny test"},
+    {"id": "unavailable-service", "assurance": "degraded independence (lead adjudication pending reviewer returns; reviewers were dispatched as four independent fresh-context subagent sessions - acceptance, tests, regression, security - with the contract and finding schema; their outputs have not yet returned)", "verdict": "INCONCLUSIVE", "check": "PASS", "note": "first attempt ended its turn with background reviewers still running and no report (see observed_host_behaviors); retry returned this INCONCLUSIVE report with no findings recorded, correctly withholding a pass"},
+    {"id": "v0.2-multi-trigger-bounded", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "only NON_ISSUE test-strength gaps recorded (equality-boundary coverage, success-only response-shape assertion, negative-current bypass); no defect validated"},
+    {"id": "v0.2-pure-formatter-no-overflow", "assurance": "independent panel", "verdict": "PASS", "check": "FAIL", "note": "verdict PASS correct; invariants reviewer selected on a pure formatter with no declared invariant (forbidden by the case)"},
+    {"id": "v0.2-retry-idempotency", "assurance": "independent panel", "verdict": "PASS", "check": "PASS", "note": "only NON_ISSUE test-strength notes recorded (type-coercion id collision, unhashable ids, missing 'id' key, single-example evidence); no defect validated"}
+  ],
+  "observed_host_behaviors": [
+    "3/12 cases ran in a single context and reported `degraded independence` (acceptance-omission, boundary-inversion, unavailable-service)",
+    "2 first attempts produced no report and were retried once: speculative-non-issue exceeded the 1500 s wall clock; unavailable-service ended its turn while background reviewer subagents were still running (exit 0, no report)",
+    "one transient provider ECONNRESET, retried by the host"
+  ],
+  "observed_skill_behaviors": [
+    "Over-inclusive invariants trigger on pure-formatter (also seen on Antigravity)"
+  ],
+  "remaining_release_evidence": [
+    "Decide whether the invariants trigger in panel.md is too loose (pure-formatter over-selection on 2 of 3 hosts)",
+    "Decide whether the harness finding-concept vocabulary for duplicate-event should accept 'duplicate entries on repeated event_id'"
+  ]
+}

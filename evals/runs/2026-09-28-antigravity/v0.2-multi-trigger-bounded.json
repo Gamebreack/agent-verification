@@ -1,0 +1,119 @@
+{
+  "case_id": "v0.2-multi-trigger-bounded",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/v0.2-multi-trigger-bounded",
+  "contract_summary": {
+    "requirements": [
+      "R1: deny when tenant_id is empty with reason 'unauthorized'",
+      "R2: grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise",
+      "R3: response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters"
+    ],
+    "risks": [
+      "quota allocation logic: medium risk covering quota arithmetic boundaries and tenant authorization"
+    ],
+    "invariants": [
+      "I1: a missing tenant must never reach the quota math"
+    ],
+    "preserved_behaviors": [
+      "P1: function signature and callable interface for allocate(tenant_id, requested, current, max_allowed)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "result": "PASS",
+      "evidence": "quota.py:2-3; test_quota.py:18-21"
+    },
+    {
+      "id": "R2",
+      "result": "PASS",
+      "evidence": "quota.py:4-9; test_quota.py:7-16"
+    },
+    {
+      "id": "R3",
+      "result": "PASS",
+      "evidence": "quota.py:3,5,6-10; test_quota.py:23-25"
+    },
+    {
+      "id": "I1",
+      "result": "PASS",
+      "evidence": "quota.py:2-3"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline for release mode",
+    "tests": "mode baseline for release mode",
+    "regression": "mode baseline for release mode",
+    "invariants": "triggered by numeric quota boundaries (current + requested <= max_allowed) and missing-tenant ordering invariant",
+    "security": "triggered by tenant authorization and tenancy boundary (tenant_id validation)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "pytest -v",
+      "result": "4 passed in 0.01s"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "4 tests passed in 0.000s"
+    },
+    {
+      "command_or_inspection": "code inspection of quota.py and test_quota.py",
+      "result": "verified R1, R2, R3, and I1 implementation and assertion coverage"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The unauthorized denial response exposes the internal counter `current` via the `remaining` field, violating the explicit requirement to never expose internal counters.",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "quota.py:3"
+      ],
+      "failure_mechanism": "allocate() called with an empty tenant_id and non-zero current -> executes line 3 returning {\"granted\": 0, \"reason\": \"unauthorized\", \"remaining\": current} -> leaks the internal counter `current` to unauthorized callers instead of withholding internal state",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "Echoing a value the caller supplied is not exposure of internal state, unless the contract makes the response recipient less trusted than that caller."
+    },
+    {
+      "id": "tests-01",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The test suite does not exercise the equality boundary current + requested == max_allowed, so an off-by-one implementation that denies equality would pass all tests",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_quota.py:8",
+        "test_quota.py:14"
+      ],
+      "failure_mechanism": "mutate quota.py:4 from '>' to '>=' -> allocate('t1', 5, 5, 10) denied with 'over_quota' instead of granted -> all existing tests pass while R2's inclusive-grant requirement is violated",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "test-strength on correct code"
+    },
+    {
+      "id": "tests-02",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The response shape assertion is only tested on the success path, allowing mutations that drop fields or expose internal counters on error paths to pass undetected",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "test_quota.py:14-16",
+        "test_quota.py:19-21",
+        "test_quota.py:24-25"
+      ],
+      "failure_mechanism": "drop remaining or expose internal counters in error-branch returns -> test_denies_over_quota and test_denies_missing_tenant still pass because they only assert granted and reason, and test_response_shape_is_stable only checks success path -> R3 contract requirement violated without test failure",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "test-strength on correct code"
+    }
+  ],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "none"
+}

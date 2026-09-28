@@ -1,0 +1,51 @@
+{
+  "case_id": "v0.2-pure-formatter-no-overflow",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/v0.2-pure-formatter-no-overflow",
+  "contract_summary": {
+    "requirements": [
+      "R1: return 'id-' followed by a 4-digit zero-padded representation of value for non-negative integer inputs"
+    ],
+    "risks": [
+      "format_id.format_id: low risk, pure function with no external consumers or dependencies"
+    ],
+    "invariants": [
+      "I1: format_id produces 'id-' prefix followed by at least 4 digits for non-negative integers"
+    ],
+    "preserved_behaviors": [
+      "P1: none (previously raised NotImplementedError)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "format_id.py:2"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline for contract compliance",
+    "tests": "mode baseline for test assertion quality",
+    "invariants": "numeric ranges and zero-padding boundary conditions"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest",
+      "result": "Ran 3 tests in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "Inspection of format_id.py:2",
+      "result": "return f\"id-{value:04d}\""
+    }
+  ],
+  "findings": [],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "none; change satisfies verification contract"
+}

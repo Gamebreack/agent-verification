@@ -1,0 +1,84 @@
+{
+  "case_id": "contract-regression",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/contract-regression",
+  "contract_summary": {
+    "requirements": [
+      "R1: responses include email"
+    ],
+    "risks": [
+      "users.get_user response shape: high risk due to external consumer render_user"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: preserve the existing required name field because render_user consumes it. Do not rename existing response fields."
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "PASS",
+      "evidence": "users.py:5"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "Mode baseline: verify requested email field is present and complete",
+    "tests": "Mode baseline: verify test assertions actually catch regressions and broken behavior",
+    "regression": "Triggered by shared interface get_user consumed by consumer.render_user and contract preserved behavior P1"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git diff",
+      "result": "users.py renamed 'name' to 'display_name' and added 'email'; test_users.py replaced 'name' assertion with 'display_name' and 'email'"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest",
+      "result": "Ran 1 test in 0.000s, OK"
+    },
+    {
+      "command_or_inspection": "python3 -c \"from consumer import render_user; render_user(7)\"",
+      "result": "KeyError: 'name' raised in consumer.py:6"
+    }
+  ],
+  "findings": [
+    {
+      "id": "regression-1",
+      "status": "VALIDATED",
+      "reviewer": "regression",
+      "claim": "get_user replaces the required 'name' field with 'display_name', breaking callers such as render_user with a KeyError.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "users.py:3-4",
+        "consumer.py:6",
+        "python3 -c \"import consumer; consumer.render_user(7)\""
+      ],
+      "failure_mechanism": "Caller render_user invokes get_user(user_id) -> get_user no longer returns the required 'name' key -> line 6 of consumer.py accesses user['name'] -> raises unhandled KeyError and crashes caller execution.",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "test_users.py was modified to drop assertions verifying the preserved 'name' field and assert the renamed 'display_name' field instead, masking a breaking contract regression.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "test_users.py:4-10",
+        "users.py:1-6",
+        "consumer.py:6"
+      ],
+      "failure_mechanism": "test_users.py replaced the required name assertion with an assertion on display_name -> test suite passes despite name being missing from get_user() -> breaking regression of P1 goes undetected by the test suite and enforces the breaking field rename.",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    }
+  ],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "Restore the 'name' field in users.get_user to preserve compatibility with consumer.render_user (P1), and restore test coverage for 'name' in test_users.py."
+}

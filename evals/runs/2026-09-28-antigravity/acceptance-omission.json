@@ -1,0 +1,117 @@
+{
+  "case_id": "acceptance-omission",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/acceptance-omission",
+  "contract_summary": {
+    "requirements": [
+      "R1: trim surrounding whitespace from both names",
+      "R2: return both names separated by exactly one space. A blank component must not create leading or trailing whitespace."
+    ],
+    "risks": [
+      "profile.format_profile: low (pure string utility function with no external consumers or state)"
+    ],
+    "invariants": [
+      "I1: A blank component must not create leading or trailing whitespace in the output"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "result": "FAIL",
+      "evidence": "profile.py:2 (last_name parameter is unreferenced and untrimmed)"
+    },
+    {
+      "id": "A2",
+      "result": "FAIL",
+      "evidence": "profile.py:2 (returns only first_name.strip(), omitting last_name and separating space)"
+    },
+    {
+      "id": "A3",
+      "result": "FAIL",
+      "evidence": "profile.py:2 (format_profile(\"\", \"Lovelace\") returns \"\" instead of \"Lovelace\")"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "baseline role for panel mode; verifies implementation completeness against task contract",
+    "tests": "baseline role for panel mode; verifies test suite assertions validate contract requirements"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest test_profile.py",
+      "result": "Ran 1 test in 0.000s; OK (test passes but actively asserts broken behavior)"
+    },
+    {
+      "command_or_inspection": "code inspection of profile.py and test_profile.py",
+      "result": "profile.py returns only first_name.strip(); test_profile.py asserts format_profile(\"  Ada  \", \"Lovelace\") == \"Ada\""
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "format_profile completely omits last_name and does not return both names separated by a single space",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "profile.py:1-2",
+        "test_profile.py:8"
+      ],
+      "failure_mechanism": "Call format_profile(\"Ada\", \"Lovelace\") -> function returns only first_name.strip() (\"Ada\") -> last_name and space separation required by R2 are omitted",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "format_profile fails to trim surrounding whitespace from last_name",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "profile.py:1-2"
+      ],
+      "failure_mechanism": "Call format_profile with last_name containing whitespace -> last_name is ignored and not stripped -> R1 requirement to trim whitespace from both names is violated",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-3",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "format_profile returns an empty string instead of last_name when first_name is blank",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "profile.py:2"
+      ],
+      "failure_mechanism": "Call format_profile(\"\", \"Lovelace\") -> first_name.strip() evaluates to \"\" -> valid last_name component is discarded",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "test_profile.py actively asserts incorrect behavior by expecting format_profile(\"  Ada  \", \"Lovelace\") to return \"Ada\" rather than \"Ada Lovelace\"",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_profile.py:8: self.assertEqual(format_profile(\"  Ada  \", \"Lovelace\"), \"Ada\")"
+      ],
+      "failure_mechanism": "A compliant implementation of R2 is tested -> test_profile.py fails with AssertionError because it asserts omission of last_name -> test suite rejects valid code and approves defective code",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "Tests verifying whitespace trimming on last_name and blank component handling without leading/trailing whitespace are absent from test_profile.py"
+    }
+  ],
+  "source_unchanged": true,
+  "minimum_next_action": "Implement format_profile to trim both names, join non-blank components with a single space, and update test_profile.py to assert correct behavior conforming to R1 and R2."
+}

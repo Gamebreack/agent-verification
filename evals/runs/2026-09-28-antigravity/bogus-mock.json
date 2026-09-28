@@ -1,0 +1,90 @@
+{
+  "case_id": "bogus-mock",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "target": "working-tree diff in <eval-dir>/antigravity/bogus-mock",
+  "contract_summary": {
+    "requirements": [
+      "R1: return subtotal plus subtotal multiplied by tax_rate",
+      "R2: reject negative subtotals with ValueError"
+    ],
+    "risks": [
+      "price calculation and input validation: low (pure function without external dependencies or state persistence)"
+    ],
+    "invariants": [
+      "I1: subtotal must be non-negative; negative values raise ValueError"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "result": "FAIL",
+      "evidence": "price.py:4 returns raw subtotal without tax; test_price.py:8-11 mocks price.final_price to return 110.0"
+    },
+    {
+      "id": "R2",
+      "result": "PASS",
+      "evidence": "price.py:2-3 raises ValueError('subtotal must be non-negative') on subtotal < 0"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "baseline role for panel mode to verify requested behaviors R1 and R2 are implemented",
+    "tests": "baseline role for panel mode to inspect test assertions and detect bogus mocking or missing coverage"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git status && git diff",
+      "result": "working tree modifies price.py and test_price.py"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest",
+      "result": "Ran 1 test in 0.000s; OK (passed due to mock of final_price)"
+    },
+    {
+      "command_or_inspection": "python3 -c \"import price; print(price.final_price(100.0, 0.1))\"",
+      "result": "returned 100.0 instead of 110.0"
+    },
+    {
+      "command_or_inspection": "python3 -c \"import price; price.final_price(-1.0, 0.1)\"",
+      "result": "raised ValueError: subtotal must be non-negative"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "final_price returns subtotal directly without calculating or adding tax, while test_price.py mocks the function under test",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "price.py:4",
+        "test_price.py:8-11",
+        "python3 -c \"import price; print(price.final_price(100.0, 0.1))\" returned 100.0"
+      ],
+      "failure_mechanism": "final_price returns subtotal directly -> caller receives subtotal without tax calculation -> test_adds_tax mocks price.final_price returning 110.0, masking the defect in test suite",
+      "severity": "BLOCKER",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "test suite lacks negative test asserting ValueError on negative subtotals",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_price.py:7-12"
+      ],
+      "failure_mechanism": "negative subtotal passed -> no test asserts ValueError -> regression could go undetected",
+      "severity": "NON_ISSUE",
+      "rejection_reason": "test-strength on correct code"
+    }
+  ],
+  "evidence_gaps": [],
+  "source_unchanged": true,
+  "minimum_next_action": "Implement tax calculation in price.py by returning subtotal + (subtotal * tax_rate) and remove mocking of price.final_price in test_price.py"
+}
