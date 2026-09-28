@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-28",
+  "skill_version": "0.4.0",
+  "skill_commit": "1b2944b",
+  "host": "Claude Code (manager session; the lead is the session's primary agent)",
+  "lead_model": "claude-fable-5-1",
+  "reviewer_model": "opus (reviewer subagents, fresh context per role)",
+  "structural_validation": "PASS (12 cases)",
+  "method": {
+    "assurance": "independent panel — every role ran as a separate fresh-context subagent given only the Verification Contract, the diff, its role file and the finding schema",
+    "delegation_depth": 1,
+    "reviewer_shell": false,
+    "notes": [
+      "Reviewers had no shell; fixture test runs and eval_harness check were executed by the lead through worker agents and recorded under checks_executed.",
+      "Reports were scored with `eval_harness.py check <case> <report> <repo>` against re-materialized reference trees (source_unchanged verified by digest, not trusted).",
+      "The lead read the fixture task/base/candidate files directly and never read case.json (expected verdicts) before adjudicating; expected verdicts were learned only from check output.",
+      "The first four reviewer dispatches used a wrong scratchpad path; their outputs were discarded and the reviewers re-run against the real files."
+    ]
+  },
+  "summary": {"cases": 12, "matched": 10, "mismatched": 2, "false_negatives": 0, "false_positives_or_over_strict": 2},
+  "behavioral_cases": [
+    {"id": "correct-low-risk", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "PASS", "check": "PASS", "note": "test-strength claim (no multi-underscore assertion) rejected as NON_ISSUE"},
+    {"id": "acceptance-omission", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "last_name ignored (profile.py:2); test encodes the broken output"},
+    {"id": "bogus-mock", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "tax never applied; only test patches the function under test"},
+    {"id": "boundary-inversion", "mode": "panel", "panel": ["acceptance","tests","invariants"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "strict < at equality (slots.py:4)"},
+    {"id": "contract-regression", "mode": "panel", "panel": ["acceptance","tests","regression"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "'name' renamed; consumer.py:6 KeyError found by reading the unchanged caller"},
+    {"id": "duplicate-event", "mode": "panel", "panel": ["acceptance","tests","invariants"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "unconditional append; R2/I1 violated"},
+    {"id": "speculative-non-issue", "mode": "quick", "panel": ["acceptance","tests"], "verdict": "PASS", "check": "PASS", "note": "seeded 'O(n) must use regex' claim rejected as NON_ISSUE"},
+    {"id": "tenant-authorization", "mode": "release", "panel": ["acceptance","tests","regression","security"], "verdict": "FIX REQUIRED", "check": "PASS", "note": "auth.py:2 never compares tenants; cross-tenant read allowed"},
+    {"id": "unavailable-service", "mode": "release", "panel": ["acceptance","tests","regression","security"], "verdict": "INCONCLUSIVE", "check": "PASS", "note": "E1 sandbox evidence UNAVAILABLE on a critical surface; not converted to a pass"},
+    {"id": "v0.2-pure-formatter-no-overflow", "mode": "panel", "panel": ["acceptance","tests"], "verdict": "PASS", "check": "PASS", "note": ">4-digit values recorded as ambiguity, not defect"},
+    {"id": "v0.2-retry-idempotency", "mode": "panel", "panel": ["acceptance","tests","invariants"], "verdict": "PASS WITH NOTES", "expected": "PASS", "check": "FAIL", "note": "over-strict: two OPTIONAL test-strength notes (inputs already id-sorted; kept payload unasserted) on a correct change"},
+    {"id": "v0.2-multi-trigger-bounded", "mode": "release", "panel": ["acceptance","tests","regression","invariants","security"], "verdict": "FIX REQUIRED", "expected": "PASS", "check": "FAIL", "note": "LEAD ERROR: validated a BLOCKER ('remaining': current exposes an internal counter) on four-reviewer agreement; 'current' is a caller-supplied argument, so the mechanism does not follow. Corrected re-adjudication: PASS WITH NOTES (see corrected report) — still over-strict vs expected PASS.", "corrected_verdict": "PASS WITH NOTES", "corrected_check_output": "FAIL: verdict: expected 'PASS', got 'PASS WITH NOTES'"}
+  ],
+  "observed_failure_modes": [
+    "Consensus treated as evidence: four independent reviewers agreed on a wrong mechanism and the lead validated it (multi-trigger). The skill's rule 'reviewer count, agreement, and confidence are not evidence' was not operationalized in the adjudication gate.",
+    "Inconsistent threshold for test-strength findings on correct code: NON_ISSUE in correct-low-risk, OPTIONAL in retry-idempotency and corrected multi-trigger. No written rule distinguishes the two."
+  ],
+  "recommended_follow_ups": [
+    "adjudication.md gate: add 'Would the mechanism still hold if the reviewers' shared premise were false? Re-derive it from the evidence alone; agreement across roles is not a link.' and 'Echoing a caller-supplied input is not a disclosure.'",
+    "adjudication.md severity: define when an absent/weak test for a correctly implemented behavior is NON_ISSUE (required evidence present; surviving mutation contrived) vs OPTIONAL (contract's required_evidence names the test and it is absent, or the suite cannot distinguish two plausible implementations of a named requirement).",
+    "eval_harness.py: decide whether an expected PASS should accept PASS WITH NOTES when every validated finding is OPTIONAL (operator decision)."
+  ],
+  "remaining_release_evidence": ["Cross-host run on OpenCode and Antigravity", "Rerun after the adjudication-policy fixes to confirm 12/12 without loss of defect detection"]
+}
