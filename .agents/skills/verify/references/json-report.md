@@ -1,6 +1,6 @@
 # Machine-readable Report
 
-Use this format only when the invocation requests JSON. Return one JSON object and no surrounding prose or code fence.
+Use this format only when the invocation requests JSON. Return one JSON object and no surrounding prose or code fence. Field meanings follow the markdown report in [adjudication.md](adjudication.md#markdown-report).
 
 ```json
 {
@@ -14,17 +14,11 @@ Use this format only when the invocation requests JSON. Return one JSON object a
     "invariants": ["I1: rule"],
     "preserved_behaviors": ["P1: behavior"]
   },
-  "selected_reviewers": ["acceptance", "test-adequacy"],
+  "criteria": [
+    {"id": "A1", "result": "PASS | FAIL | UNAVAILABLE", "evidence": "path:line or command result"}
+  ],
+  "selected_reviewers": ["acceptance", "tests"],
   "selection_reasons": {"acceptance": "reason"},
-  "incremental": true,
-  "delta": {
-    "from_sha": "<sha>",
-    "to_sha": "<sha>",
-    "files_changed": ["..."]
-  },
-  "invalidation": {
-    "<reviewer_role>": "RE_RAN | REUSED"
-  },
   "checks_executed": [
     {"command_or_inspection": "what ran", "result": "observable result"}
   ],
@@ -34,7 +28,7 @@ Use this format only when the invocation requests JSON. Return one JSON object a
       "status": "VALIDATED | NON_ISSUE",
       "reviewer": "role",
       "claim": "falsifiable claim",
-      "requirement_or_invariant": "R1 | I1 | P1 | none",
+      "requirement_or_invariant": "R1 | A1 | I1 | P1 | none",
       "evidence": ["path:line or command result"],
       "failure_mechanism": "trigger -> behavior -> impact",
       "severity": "BLOCKER | SHOULD_FIX | OPTIONAL | NON_ISSUE",
@@ -49,10 +43,9 @@ Use this format only when the invocation requests JSON. Return one JSON object a
 }
 ```
 
-`case_id` is normally `null`; set it only when an evaluation invocation supplies one. Preserve rejected seeded claims as `NON_ISSUE` findings so adjudication can be evaluated. Do not report an unavailable check as successful.
-
-## Properties
-
-- `incremental`: boolean (optional). True when incremental re-verification was executed.
-- `delta`: object (optional). Contains `from_sha`, `to_sha`, and `files_changed`.
-- `invalidation`: object (optional). Mapping of reviewer role to `RE_RAN` or `REUSED`. For reused reviewers, record a single entry in `checks_executed` with `command_or_inspection: "evidence_paths existence check"` and `result: "passed"`.
+- `case_id` is normally `null`; set it only when an evaluation invocation supplies one.
+- `criteria[].id` uses the acceptance-criterion id from the Verification Contract, including ids kept from a `--contract` file.
+- Preserve rejected seeded claims as `NON_ISSUE` findings with a `rejection_reason`, so adjudication can be evaluated.
+- `selected_reviewers` is an empty array when the panel was empty. In `quick` mode it lists both roles carried by the single reviewer (`["acceptance", "tests"]`).
+- `source_unchanged` is `true` only when the working tree is unchanged by the verification run.
+- Do not report an unavailable check as successful.

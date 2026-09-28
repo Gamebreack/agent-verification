@@ -6,7 +6,7 @@
   "test_expectation": "pass",
   "expected": {
     "verdict": "INCONCLUSIVE",
-    "required_reviewers": ["acceptance", "security", "contract-boundaries"],
+    "required_reviewers": ["acceptance", "tests", "security", "regression"],
     "max_reviewers": 5,
     "evidence_gap_kinds": ["UNAVAILABLE"]
   }

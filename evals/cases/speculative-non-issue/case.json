@@ -7,7 +7,7 @@
   "test_expectation": "pass",
   "expected": {
     "verdict": "PASS",
-    "exact_reviewers": ["acceptance", "test-adequacy"],
+    "exact_reviewers": ["acceptance", "tests"],
     "max_reviewers": 2,
     "findings": [
       {

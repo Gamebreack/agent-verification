@@ -4,17 +4,15 @@
 
 Does the changed attack surface introduce a concrete security, privacy, or authorization failure?
 
-## Examine
+## Method
 
-- authentication, authorization, tenancy, sessions, and privilege transitions;
-- input validation and output encoding at trust boundaries;
-- secrets, sensitive data, logging, storage, and transport;
-- injection, request forgery, unsafe deserialization, path/file handling, and command execution where applicable;
-- dependency or configuration changes that alter exposure;
-- fail-open behavior and negative authorization cases.
+- Check authentication, authorization, tenant isolation, sessions, and privilege transitions, including admin paths.
+- Seek negative authorization evidence: a test or trace showing the wrong principal or tenant is denied, and that denial does not fail open.
+- Check input validation and output encoding at trust boundaries: injection, request forgery, unsafe deserialization, path/file handling, command execution.
+- Check secrets and sensitive data in code, logs, storage, and transport.
+- Check dependency or configuration changes that alter exposure.
+- Use the project's threat model and applicable OWASP ASVS areas when available.
 
-Use the project's threat model and applicable OWASP ASVS areas when available. Report an exploit or failure path grounded in the target. Do not dump a generic vulnerability checklist or require unrelated hardening.
+## Out of mandate
 
-## Method constraints
-
-Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.
+Generic vulnerability checklists and unrelated hardening. Report an exploit or failure path grounded in the target.

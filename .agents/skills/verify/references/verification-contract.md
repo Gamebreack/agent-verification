@@ -1,28 +1,15 @@
 # Verification Contract
 
-Create this contract before dispatching reviewers. It is the shared source of truth, not a restatement of the implementation.
+Create this contract before selecting reviewers. It is the shared source of truth for every reviewer, not a restatement of the implementation.
 
 ## Template
 
 ```yaml
 target:
-  kind: working-tree | range | commit | branch | pull-request | files | feature | subsystem | workflow | artifact
+  kind: working-tree | range | commit | branch | pull-request | files
   value: <resolved target>
-  identity:                 # required when kind ∈ {feature, subsystem, workflow, artifact}
-    description: <feature/subsystem/workflow/artifact name>
-    in_scope:
-      - <path, glob, or behavior anchor that defines the assurance boundary>
-    out_of_scope:
-      - <path, glob, or behavior explicitly outside the boundary>
-    anchor:
-      branch: <branch>
-      sha: <baseline sha>
-      range: <commit range or null>
-      pr: <pull request id or null>
-    acceptance_criteria:
-      - R1
 source_of_truth:
-  - <task, issue, specification, accepted plan, or explicit user statement>
+  - <--contract file, task, issue, specification, accepted plan, or explicit user statement>
 requested_behaviors:
   - id: R1
     behavior: <externally observable behavior>
@@ -61,4 +48,10 @@ ambiguities:
 - Required evidence must match the failure mode. Line coverage alone is never sufficient.
 - Distinguish absent evidence from evidence that could not be collected. The former may require a fix; the latter may make the verdict inconclusive.
 - Preserve ambiguities. Do not silently resolve them in favor of the implementation.
-- For `target.kind` ∈ `{feature, subsystem, workflow, artifact}`, `target.identity` is mandatory. Resolve each path/glob in `in_scope` and confirm `anchor.sha` (or `range`/`pr`) is reachable before selecting reviewers. If identity cannot be resolved read-only, ask for it or return `INCONCLUSIVE`. `files` keeps the v0.2 behavior and does not require an identity block.
+
+## When `--contract` is supplied
+
+- Extract requested behaviors, acceptance criteria, and non-goals from it verbatim where possible.
+- Keep each acceptance criterion's own numbering and wording from the source file (for example `AC-3` stays `AC-3`), so the report's per-criterion table maps back to the file 1:1. Use `A1..An` only when the file has no numbering.
+- Fill the remaining fields (surfaces, invariants, preserved behaviors, evidence) from the diff and repository, but never let them contradict or narrow the file.
+- Record any conflict between the file and other intent sources under `ambiguities`; the precedence in SKILL.md decides it.

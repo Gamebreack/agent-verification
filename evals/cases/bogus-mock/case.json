@@ -1,12 +1,12 @@
 {
   "id": "bogus-mock",
   "title": "A test mocks the behavior it claims to prove",
-  "mode": "tests",
+  "mode": "panel",
   "task": "Implement final_price(subtotal, tax_rate). R1: return subtotal plus subtotal multiplied by tax_rate. R2: reject negative subtotals with ValueError.",
   "test_expectation": "pass",
   "expected": {
     "verdict": "FIX REQUIRED",
-    "required_reviewers": ["test-adequacy", "mutation-sabotage"],
+    "required_reviewers": ["acceptance", "tests"],
     "max_reviewers": 4,
     "findings": [
       {

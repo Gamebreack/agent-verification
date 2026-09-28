@@ -8,7 +8,6 @@ __pycache__/
 .ruff_cache/
 
 # Verification skill local state & harness
-.verify/
 .verify-eval/
 eval-report.json
 
