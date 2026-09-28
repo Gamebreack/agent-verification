@@ -2,20 +2,17 @@
 
 ## Question
 
-Which previously valid behaviors could this target have changed unintentionally?
+Which previously valid behaviors, or consumers of the changed interfaces, could this target break?
 
-## Examine
+## Method
 
-- callers and public interfaces;
-- schemas, migrations, persisted state, and serialization;
-- authorization and side effects;
-- event, API, CLI, and file contracts;
-- defaults, configuration, and backward compatibility;
-- historical tests and documented behavior;
-- shared code paths outside the stated feature.
+- Cover the contract's P*/I* entries first; list any categories of your mandate you could not examine under `Out of mandate:` so the lead sees the gap.
+- Check each preserved behavior in the contract against the change and historical tests.
+- Find the callers and consumers of every changed interface. Reading unchanged caller files is in scope for this role.
+- Check compatibility of request, response, event, schema, file, CLI, and protocol shapes: required vs. optional fields, defaults, nullability, enums, structured response keys, error semantics, and serialization.
+- Check migrations, persisted state, configuration defaults, and side effects.
+- When the required outcome spans several components, verify the shortest complete path through the real integration points, including one material failure path when risk justifies it; prefer a focused integration test over full end-to-end.
 
-Connect every finding to an actual affected consumer or preserved behavior. A theoretical blast radius without a plausible changed behavior is not a finding.
+## Out of mandate
 
-## Method constraints
-
-Follow [../efficiency-contract.md](../efficiency-contract.md): inspect only surfaces relevant to this mandate; no rediscovery; stop when established or refuted; prefer `NO FINDINGS` over speculative claims.
+Theoretical blast radius without a plausible changed behavior. Name the affected producer and consumer, or the preserved behavior, for every finding.

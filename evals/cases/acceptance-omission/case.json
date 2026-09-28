@@ -1,13 +1,13 @@
 {
   "id": "acceptance-omission",
   "title": "Partial feature omits an acceptance criterion",
-  "mode": "feature",
+  "mode": "panel",
   "task": "Implement format_profile(first_name, last_name). R1: trim surrounding whitespace from both names. R2: return both names separated by exactly one space. A blank component must not create leading or trailing whitespace.",
   "test_expectation": "pass",
   "expected": {
     "verdict": "FIX REQUIRED",
-    "required_reviewers": ["acceptance", "test-adequacy"],
-    "max_reviewers": 5,
+    "required_reviewers": ["acceptance", "tests"],
+    "max_reviewers": 4,
     "findings": [
       {
         "name": "omitted-last-name",

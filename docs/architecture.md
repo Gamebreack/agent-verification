@@ -2,46 +2,39 @@
 
 ## Decision
 
-Build one canonical Agent Skill at `.agents/skills/verify`. Keep the orchestration policy in `SKILL.md`, detailed contracts in shared references, and each reviewer mandate in its own role file.
-
-The verification lead uses the host's native subagent capability. There is no custom runtime.
+Build one canonical Agent Skill at `.agents/skills/verify`. Keep the orchestration policy in `SKILL.md`, detailed contracts in shared references, and each reviewer mandate in its own role file. There is no custom runtime; the verification lead uses the host's native subagent capability.
 
 ```mermaid
 flowchart TD
-    A["Task + resolved change"] --> B["Verification Contract"]
-    B --> C["Risk and surface selection"]
+    A["Task + --contract + resolved target"] --> B["Verification Contract"]
+    B --> C["Panel selection (mode, risk, surface triggers)"]
     C --> D["Clean-context reviewers"]
     D --> E["Evidence-gated adjudication"]
-    E --> F["PASS / NOTES / FIX / INCONCLUSIVE"]
+    E --> F["PASS / PASS WITH NOTES / FIX REQUIRED / INCONCLUSIVE"]
 ```
 
-## Why a single orchestrator skill
+## Modes
 
-- Specialist roles are implementation details, not capabilities users need to discover independently.
-- Separate role files preserve progressive disclosure and let clean-context reviewers load only their mandate.
-- Permanent host-specific agent definitions would duplicate policy and drift.
-- The same skill is discoverable by Codex, OpenCode, Cursor, and Antigravity from `.agents/skills`, following the Agent Skills standard.
+`quick` (one reviewer context carrying both the acceptance and tests roles; max roles 2), `panel` (default; baseline: acceptance + tests; max roles 4), `release` (baseline: acceptance + tests + regression; max roles 5). Surface triggers and risk bands select any additional roles up to the mode's maximum; see [`references/panel.md`](../.agents/skills/verify/references/panel.md).
+
+## Reviewer roles
+
+Exactly five: `acceptance`, `tests`, `regression`, `invariants`, `security`. Each role runs as one reviewer; a role is never split across reviewers.
+
+## The `--contract` file
+
+An optional human-editable file (for example a work-item or issue export) holding the task statement, acceptance criteria, and non-goals. When supplied it outranks every other intent source and its acceptance-criterion ids are preserved verbatim into the report.
 
 ## Execution boundaries
 
-- Maximum delegation depth: one.
-- Normal automatic panel: two to five reviewers.
-- Reviewers are read-only and cannot fix or delegate.
+- Maximum delegation depth: one. Reviewers never delegate or fix.
 - The verification lead adjudicates; reviewer output never directly determines the verdict.
-- Existing project tools may be executed. New verification dependencies are not installed by the skill.
-- Actual mutation testing runs only when already configured and only in an isolated copy/worktree. Otherwise use semantic sabotage analysis.
+- Existing project tools may be executed; the skill installs no new dependencies.
+- The skill is read-only with respect to source, tests, configuration, and the `--contract` file.
 
 ## Host behavior
 
-| Host | Canonical skill | Invocation | Adapter |
-|---|---|---|---|
-| Cursor | `.agents/skills/verify` or installed GitHub skill | `/verify` | None |
-| ChatGPT Work | plugin-bundled skill | `@verify` | Future plugin packaging |
-| Codex CLI/IDE | `.agents/skills/verify` | `$verify` | None |
-| OpenCode | `.agents/skills/verify` | `/verify` | `.opencode/commands/verify.md` |
-| Antigravity (`agy`) | `.agents/skills/verify` | `/verify` (interactive TUI) / contextual (CLI `-p`) | None |
-
-Host-specific files may invoke or expose the canonical skill, but must not duplicate its verification policy.
+The same skill is discoverable by every compliant host from `.agents/skills` (or a host-specific symlink); see [Installation](installation.md) for the discovery table. Host-specific files may invoke or expose the canonical skill but must not duplicate its verification policy.
 
 ## Assurance degradation
 
@@ -49,17 +42,4 @@ If the host lacks subagents, the lead may run roles sequentially, but must label
 
 ## Evaluation architecture
 
-`scripts/eval_harness.py` materializes each case as a real Git repository with a baseline commit and candidate working-tree diff. The candidate's own tests normally pass. A verifier report is scored against semantic expectations—verdict, selected roles, contract linkage, evidence paths, defect concepts, evidence gaps, and source immutability—rather than exact prose.
-
-## Assurance boundaries and incremental re-verification (v0.3)
-
-v0.3 introduces assurance boundaries to verify entire systems, features, workflows, or artifacts rather than only git commits or diffs:
-- **Target identity**: `feature`, `subsystem`, `workflow`, and `artifact` targets define their boundary via `target.identity` (`in_scope`, `out_of_scope`, `anchor`, and `acceptance_criteria`).
-- **State persistence**: Prior verification states are recorded in `<cwd>/.verify/state.json` (or `$VERIFY_STATE_PATH`). Storage is target-local and host-wrapped; the verify skill remains strictly read-only.
-- **Delta invalidation**: When re-verifying against prior state, the delta is evaluated against the invalidation map to re-run only invalidated reviewers while reusing untainted findings.
-- **Scope-preservation guard**: Adjudication enforces that reviewers evaluate against the user's full target boundary; claims that narrow scope below the target are rejected as `out-of-target-narrowing`.
-
-## Deferred decisions
-
-- Plugin packaging and marketplace distribution.
-- Optional host-specific permission profiles for stronger read-only enforcement.
+`scripts/eval_harness.py` materializes each fixture as a real Git repository with a baseline commit and a candidate working-tree diff. `check` independently re-materializes the same base+candidate snapshots into a scratch directory and compares content digests, rather than trusting anything recorded inside the checked repository. A verifier report is then scored against semantic expectations — verdict, selected roles, evidence paths, defect concepts, and evidence gaps — rather than exact prose.

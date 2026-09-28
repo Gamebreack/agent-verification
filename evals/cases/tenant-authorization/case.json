@@ -6,7 +6,7 @@
   "test_expectation": "pass",
   "expected": {
     "verdict": "FIX REQUIRED",
-    "required_reviewers": ["acceptance", "regression", "security"],
+    "required_reviewers": ["acceptance", "tests", "regression", "security"],
     "max_reviewers": 5,
     "findings": [
       {
