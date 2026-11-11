@@ -26,3 +26,9 @@ venv/
 *.swp
 *.swo
 *~
+
+# Local planning layer (not shipped)
+docs/megaplan/
+stages/
+CONTEXT.md
+openspec/
