@@ -1,0 +1,107 @@
+{
+  "case_id": "v0.5-no-shell-reviewers",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD d02a50953fabfa3c8bd6a16a5744b9b417bc9746 on main (temperature.py, test_temperature.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to temperature.py (new fahrenheit_to_celsius)",
+      "working-tree changes to test_temperature.py (new import and test_fahrenheit_to_celsius)"
+    ],
+    "not_covered": [
+      "pre-existing code at HEAD outside the diff",
+      "committed history (branch main has no commits beyond its base; no branch range reviewed)",
+      ".verify-eval/ (untracked evaluation material, not part of the change)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-no-shell-reviewers/repo/.verify-eval/task.md",
+    "source_hash": "87bd07f27ab56c36559e969c4e2c14502c3fceee",
+    "requirements": [
+      "R1: temperature.py exposes fahrenheit_to_celsius(fahrenheit) returning (fahrenheit - 32) * 5 / 9 as a float"
+    ],
+    "risks": [
+      "temperature.py: low - pure function added; no existing caller observes a difference",
+      "test_temperature.py: low - test addition only"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: celsius_to_fahrenheit is unchanged (returns celsius * 9 / 5 + 32)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "Add fahrenheit_to_celsius(fahrenheit) to temperature.py; return (fahrenheit - 32) * 5 / 9 as a float.",
+      "result": "PASS",
+      "evidence": "temperature.py:5-6 returns (fahrenheit - 32) * 5 / 9 (true division yields float); test_temperature.py:10-12 asserts 212->100 and 0->-17.77778 (places=5)"
+    },
+    {
+      "id": "P1",
+      "text": "celsius_to_fahrenheit is unchanged.",
+      "result": "PASS",
+      "evidence": "temperature.py:1-2 identical to HEAD (git diff shows only added lines 3-6); test_temperature.py:7-8 unchanged and passing"
+    },
+    {
+      "id": "E1",
+      "text": "Run the project's unittest suite (python3 -m unittest) in this run and observe it pass.",
+      "result": "PASS",
+      "evidence": "python3 -m unittest (lead) -> 'Ran 2 tests in 0.000s OK', exit 0"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest (repo root)",
+      "result": "Ran 2 tests in 0.000s; OK; exit 0",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; git status --porcelain --untracked-files=all; inspection of temperature.py and test_temperature.py against HEAD",
+      "result": "diff adds only fahrenheit_to_celsius and its test/import; celsius_to_fahrenheit untouched; nothing staged",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "trace R1/P1/E1 to temperature.py:1-6, test_temperature.py:7-12 and lead-run unittest output",
+      "result": "R1 PASS, P1 PASS, E1 PASS; NO FINDINGS",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "sabotage analysis (swap 5/9->9/5, drop -32, +32, constant return, // division, int truncation) against test_temperature.py:10-12",
+      "result": "every mutation caught by test_fahrenheit_to_celsius; NO FINDINGS",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "reviewer-run commands",
+      "reason": "reviewers cannot execute commands in this run; the lead ran the required unittest suite and supplied its output"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "d02a50953fabfa3c8bd6a16a5744b9b417bc9746",
+    "files": {
+      "temperature.py": "a9907ac579f5e963ee44b3067c4698755ece2704",
+      "test_temperature.py": "32aede36555b014668c0169127d032395d83a3a4"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required; the change may proceed. The only side effect of the run is an untracked __pycache__/ left by python3 -m unittest."
+}

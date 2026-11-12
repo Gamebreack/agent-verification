@@ -1,0 +1,224 @@
+{
+  "case_id": "v0.5-base-origin-head",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "branch feature vs merge base a9676dc (origin/HEAD -> origin/main) plus working tree: commit 682b6b3 and uncommitted changes to greeting.py, test_greeting.py; files greeting.py, test_greeting.py, test_window.py, window.py",
+  "scope": {
+    "covered": [
+      "commit 682b6b3 (branch-1) relative to merge base a9676dc",
+      "uncommitted working-tree changes to greeting.py and test_greeting.py",
+      "new files window.py and test_window.py"
+    ],
+    "not_covered": [
+      "pre-existing code at baseline a9676dc outside the diff",
+      "remote state (no fetch; origin is unreachable)",
+      "the index: nothing is staged, so the working tree is what was reviewed"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-base-origin-head/repo/.verify-eval/task.md",
+    "source_hash": "a2cb2d2dcc00208c0e9831490c9a65ea1b05b914",
+    "requirements": [
+      "R1: sliding_windows(values, size) in window.py returns every contiguous window of length size, in order: len(values) - size + 1 windows when 1 <= size <= len(values), else an empty list.",
+      "R2: greet(name) in greeting.py returns \"Hello, <name>!\" with surrounding whitespace stripped from name."
+    ],
+    "risks": [
+      "window.py sliding_windows: medium. It is a new pure function with an inclusive numeric boundary, and the contract requires an exact window count.",
+      "greeting.py greet: low. It is a one-line string change with no consumers in the repo."
+    ],
+    "invariants": [
+      "I1: window count == len(values) - size + 1 for 1 <= size <= len(values), including exactly one window when size == len(values)",
+      "I2: every window has length size, and windows are ordered by start index",
+      "I3: the result is an empty list when size < 1 or size > len(values)"
+    ],
+    "preserved_behaviors": [
+      "P1: greet(\"Ada\") == \"Hello, Ada!\""
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: for 1 <= size <= len(values), sliding_windows returns every contiguous window of length size in order, i.e. len(values) - size + 1 windows equal to [values[i:i+size] for i in 0..len(values)-size].",
+      "result": "FAIL",
+      "evidence": "window.py:4 uses range(len(values) - size), which drops the last start index. Lead run: python3 -I -c probe gave sliding_windows([1,2,3,4],2) -> [[1, 2], [2, 3]] (expected 3 windows) and sliding_windows([1,2,3],3) -> [] (expected [[1, 2, 3]])."
+    },
+    {
+      "id": "A2",
+      "text": "R1: when size < 1 or size > len(values), sliding_windows returns an empty list.",
+      "result": "PASS",
+      "evidence": "window.py:2-3 guards size < 1. The size > len case gives an empty range at window.py:4. Lead probe: sliding_windows([1,2],3) -> []. Acceptance reviewer probes: size 0 and size -1 -> []."
+    },
+    {
+      "id": "A3",
+      "text": "R2: greet(name) returns \"Hello, <name>!\" with surrounding whitespace stripped from name.",
+      "result": "PASS",
+      "evidence": "greeting.py:2 returns f\"Hello, {name.strip()}!\". python3 -m unittest -v: test_strips_whitespace (greet(\"  Ada \\n\") == \"Hello, Ada!\") ok."
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline",
+    "invariants": "trigger: the contract requires an inclusive numeric range rule (1 <= size <= len(values)) and an exact window count/ordering for sliding_windows"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v (repo root)",
+      "result": "Ran 4 tests, OK (test_greets, test_strips_whitespace, test_first_window, test_rejects_non_positive_size)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -I -c probe: sliding_windows([1,2,3,4],2), ([1,2,3],3), ([1,2],3), ([],1)",
+      "result": "[[1, 2], [2, 3]] [] [] []. The first two contradict A1/I1.",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B probes of sliding_windows and greet (acceptance reviewer)",
+      "result": "[1,2,3,4],2 -> [[1,2],[2,3]]; [1,2,3],3 -> []; size 0/-1/3 on [1,2] -> []; greet('  Ada \\n') -> 'Hello, Ada!'; greet('Ada') -> 'Hello, Ada!'",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v, plus python3 -B probes (tests reviewer)",
+      "result": "4 tests OK while the off-by-one defect reproduces; [1,2,3],3 -> []",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "python3 -B probes (invariants reviewer)",
+      "result": "[1,2,3,4],2 -> [[1,2],[2,3]]; [1,2,3],3 -> []; [1],1 -> []; size 0/-1 and size > len -> []",
+      "execution": "executed",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "read git diff a9676dc covering window.py, test_window.py, greeting.py, test_greeting.py",
+      "result": "window.py:4 range(len(values) - size) is off by one; test_window.py:8 asserts only element [0]; greeting.py:2 strips name",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression and security reviewers",
+      "reason": "Not triggered. greet and sliding_windows have no other consumers in the repo, and no trust boundary, auth, or persisted surface changed."
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "sliding_windows drops the last window for every valid size. It returns len(values)-size windows instead of len(values)-size+1, and returns [] when size == len(values).",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "window.py:4 `for start in range(len(values) - size)` excludes start = len(values) - size",
+        "lead: python3 -I -c probe gave sliding_windows([1,2,3,4],2) -> [[1, 2], [2, 3]] (expected [[1,2],[2,3],[3,4]])",
+        "lead: sliding_windows([1,2,3],3) -> [] (expected [[1,2,3]])",
+        "test_window.py:8 asserts only [0] and test_window.py:11 only size=0, so python3 -m unittest passes 4/4 with the defect present"
+      ],
+      "failure_mechanism": "any call with 1 <= size <= len(values) -> the window starting at len(values)-size is never produced -> the result is one window short, and a full-length window comes back as an empty list. This violates R1/A1/I1 while the test suite stays green.",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "sliding_windows always returns one window too few in the valid range because it drops the last window.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "window.py:4 range(len(values) - size)",
+        "probe s([1],1) -> []"
+      ],
+      "failure_mechanism": "1 <= size <= len(values) -> final window missing -> callers lose trailing data",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1 (same root cause, window.py:4); merged",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause, window.py:4); merged"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "sliding_windows drops the last window, and the suite passes because no test asserts the full window list or the size == len(values) boundary.",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "window.py:4",
+        "test_window.py:8 asserts only [0]",
+        "PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v -> 4 OK with the defect present"
+      ],
+      "failure_mechanism": "valid size -> one window short -> A1/I1 broken while CI is green",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1. Its test evidence (a test that cannot fail while R1 is broken) is merged into acceptance-1.",
+      "rejection_reason": "duplicate of acceptance-1. Its test evidence (a test that cannot fail while R1 is broken) is merged into acceptance-1."
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The window tests cannot detect the A1/I1 defect, so the passing unittest run does not show that R1 is met.",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "test_window.py:8",
+        "test_window.py:11"
+      ],
+      "failure_mechanism": "off-by-one in window.py:4 -> both tests still pass -> R1 looks accepted",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "a test that cannot fail while the requirement is broken is evidence of the code defect; merged into acceptance-1",
+      "rejection_reason": "a test that cannot fail while the requirement is broken is evidence of the code defect; merged into acceptance-1"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The required evidence is absent: no test asserts the full window list (count and content), the size == len(values) boundary, or size > len(values).",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_window.py:7-11 contains only test_first_window ([0] == [1,2]) and test_rejects_non_positive_size (size=0)"
+      ],
+      "failure_mechanism": "sabotaging the size > len path or returning only the first window -> no test fails",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "an absent required test is a MISSING evidence gap, not a finding; recorded under evidence_gaps",
+      "rejection_reason": "an absent required test is a MISSING evidence gap, not a finding; recorded under evidence_gaps"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "invariants",
+      "note": "greeting.py / test_greeting.py (R2) not examined; non-list inputs and non-int size are outside the contract",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "No test asserts the full sliding_windows result (window count and content), the size == len(values) boundary, or size > len(values) (test_window.py:7-11). The window.py:4 off-by-one passes the suite undetected."
+    }
+  ],
+  "verified_state": {
+    "head": "682b6b3dbe752977c88d15ee13d80bd11a30ad88",
+    "files": {
+      "greeting.py": "8c146cb05c821f88f23e3f471611172b8c45742e",
+      "test_greeting.py": "212d1d85a263abd20c38ee873bf74bb63f74c3f6",
+      "test_window.py": "dcadefa93a3948c784eb133c4adcf32466045a3e",
+      "window.py": "aa67fdbd7c624ce7e8954f476740984558025bf2"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Fix window.py:4 so it emits all len(values)-size+1 windows. Add tests asserting the full window list, the size == len(values) case, and the size > len(values) case. Then re-check with acceptance, tests and invariants against verified_state head 682b6b3 and the file hashes above. Until a re-check passes, the change must not be committed, pushed, or described as verified."
+}

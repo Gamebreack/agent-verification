@@ -1,0 +1,171 @@
+{
+  "case_id": "contract-regression",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 3b2ab67 (users.py, test_users.py); no origin/HEAD and the branch is main, so there are no branch commits beyond the working tree",
+  "scope": {
+    "covered": [
+      "users.py working-tree change to get_user response",
+      "test_users.py working-tree change",
+      "unchanged consumer consumer.py (read as consumer of get_user)"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff except consumer.py as a consumer",
+      "committed history before HEAD 3b2ab67"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/contract-regression/repo/.verify-eval/task.md",
+    "source_hash": "71e348cd1728461c9ba50107b2503c61830c522b",
+    "requirements": [
+      "R1: get_user(user_id) responses include email"
+    ],
+    "risks": [
+      "get_user response shape (structured keys consumed by consumer.py render_user): high \u2014 removing or renaming a key breaks an existing consumer at runtime"
+    ],
+    "invariants": [
+      "Constraint: do not rename existing response fields (id, name)"
+    ],
+    "preserved_behaviors": [
+      "P1: preserve the existing required name field because render_user consumes it"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "responses include email",
+      "result": "PASS",
+      "evidence": "users.py:5 returns \"email\": \"ada@example.com\"; test_users.py:10 asserts it; `python3 -B -m unittest -v test_users` -> 1 test OK"
+    },
+    {
+      "id": "P1",
+      "text": "preserve the existing required name field because render_user consumes it",
+      "result": "FAIL",
+      "evidence": "users.py:2-6 returns no name key (it was renamed to display_name); `python3 -B -c \"from consumer import render_user; print(render_user(7))\"` -> KeyError: 'name' at consumer.py:6, exit 1"
+    },
+    {
+      "id": "C1",
+      "text": "Do not rename existing response fields",
+      "result": "FAIL",
+      "evidence": "git diff users.py: \"name\" -> \"display_name\" (users.py:4)"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "regression": "trigger: structured response keys of get_user are consumed by another module (consumer.py render_user), and the contract names P1"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v test_users",
+      "result": "Ran 1 test (test_includes_email) OK, exit 0",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -c \"from consumer import render_user; print(render_user(7))\"",
+      "result": "KeyError: 'name' at consumer.py:6, exit 1",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; git show HEAD:users.py; git show HEAD:test_users.py",
+      "result": "name renamed to display_name, email added; the old test asserted {\"id\": 7, \"name\": \"Ada Lovelace\"} and was replaced by assertions on display_name and email",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "grep -rn get_user/['name'] --include=*.py",
+      "result": "consumer.py:5-6 is the only non-test consumer and reads user['name']",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "none is configured in the repository; a sabotage analysis was done statically by the tests reviewer instead"
+    }
+  ],
+  "findings": [
+    {
+      "id": "regression-1",
+      "status": "VALIDATED",
+      "reviewer": "regression",
+      "claim": "get_user no longer returns the required name field because it was renamed to display_name, which breaks render_user",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git show HEAD:users.py returned {'id': user_id, 'name': 'Ada Lovelace'}",
+        "users.py:2-6 returns id, display_name, email and no name",
+        "consumer.py:6 reads user['name']",
+        "`python3 -B -c \"from consumer import render_user; print(render_user(7))\"` -> KeyError: 'name', exit 1",
+        "test_users.py:7-10 asserts only display_name and email, so the suite passes (1 test OK) while P1 is broken (merged from tests-1)"
+      ],
+      "failure_mechanism": "render_user(user_id) calls get_user and reads user['name'] -> the key is absent and KeyError is raised -> the preserved user-rendering path crashes, violating P1 and the no-rename constraint, and the changed test cannot detect it",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "get_user response renames the required key name to display_name and omits name",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "users.py:2-6",
+        "consumer.py:6",
+        "render_user(7) -> KeyError: 'name'"
+      ],
+      "failure_mechanism": "caller reads user['name'] -> KeyError -> existing consumer breaks",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of regression-1 (same root cause); merged",
+      "rejection_reason": "duplicate of regression-1 (same root cause: rename of name to display_name); merged"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The modified test suite does not detect removal or rename of the required name field",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "test_users.py:7-10 asserts only display_name and email",
+        "git show HEAD:test_users.py asserted {\"id\": 7, \"name\": \"Ada Lovelace\"}",
+        "unittest -> 1 test OK while render_user(7) raises KeyError"
+      ],
+      "failure_mechanism": "name is dropped or renamed -> test_includes_email still passes -> the P1 break ships undetected",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "the test cannot fail while P1 is broken, so it is evidence of the regression-1 code defect; merged into regression-1 (gate step 6)",
+      "rejection_reason": "merged into regression-1 as evidence of the same root cause"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "test coverage breadth/style beyond acceptance evidence",
+      "disposition": "adjudicated",
+      "finding_id": "regression-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "3b2ab67500a3b6511067461033c8c960d9354228",
+    "files": {
+      "users.py": "693e97068bfbf985146c183c3f426756a8fb6636",
+      "test_users.py": "f12424cf3f199bcedbd0daeabf2af42848ccbc92"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Restore the name key in get_user's response alongside email, without renaming existing fields, and add a test that asserts name (and/or exercises render_user). Then run a re-check with acceptance, tests and regression against verified_state head 3b2ab67 (users.py 693e970, test_users.py f12424c). The change must not be committed, pushed, or described as verified until a re-check passes."
+}

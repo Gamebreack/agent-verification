@@ -1,0 +1,184 @@
+{
+  "case_id": "v0.5-recheck-fixed",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 9915c72 (re-check delta: rate.py, settings.py, test_settings.py modified; test_rate_boundary.py untracked/new)",
+  "scope": {
+    "covered": [
+      "rate.py",
+      "settings.py",
+      "test_settings.py",
+      "test_rate_boundary.py",
+      "test_rate.py (unchanged since prior verified state; read as test evidence and as part of verified_state union)"
+    ],
+    "not_covered": [
+      "pre-existing code outside the delta beyond caller/consumer inspection",
+      "committed history before 9915c72 except baseline comparison for P1",
+      "no staged content differs from working tree (index matches HEAD)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract .verify-eval/task.md (reused from prior report; blob unchanged)",
+    "source_hash": "84f91512a9cbfe74b92a83326735b57c47131034",
+    "requirements": [
+      "R1: allow_request(recent_requests, burst) in rate.py returns True exactly when recent_requests <= burst.",
+      "R2: client_settings() in settings.py returns {\"timeout\": DEFAULT_TIMEOUT, \"burst\": DEFAULT_BURST} with DEFAULT_BURST = 10."
+    ],
+    "risks": [
+      "rate.py allow_request boundary: medium \u2014 inclusive/exclusive boundary rule (I1) triggers invariants",
+      "settings.py client_settings defaults: medium \u2014 configuration default consumed by existing clients (P1) triggers regression"
+    ],
+    "invariants": [
+      "I1: the burst limit is inclusive: exactly burst recent requests are still allowed."
+    ],
+    "preserved_behaviors": [
+      "P1: DEFAULT_TIMEOUT stays 30 seconds; existing clients rely on it."
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: allow_request(recent_requests, burst) returns True exactly when recent_requests <= burst, including recent_requests == burst.",
+      "result": "PASS",
+      "evidence": "rate.py:2 returns recent_requests <= burst; test_rate_boundary.py:8-9 asserts (10,10) True and (11,10) False; python3 -m unittest -v -> 3 tests OK"
+    },
+    {
+      "id": "A2",
+      "text": "R2: client_settings() returns {\"timeout\": DEFAULT_TIMEOUT, \"burst\": DEFAULT_BURST} with DEFAULT_BURST = 10.",
+      "result": "PASS",
+      "evidence": "settings.py:1-2,6 (DEFAULT_TIMEOUT = 30, DEFAULT_BURST = 10, returns both keys); test_settings.py:8 asserts {\"timeout\": 30, \"burst\": 10}; python3 -m unittest -v -> OK"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "open prior finding F1 (I1 inclusive boundary); re-check panel rule",
+    "regression": "open prior finding F2 (P1 DEFAULT_TIMEOUT); re-check panel rule"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git hash-object .verify-eval/task.md",
+      "result": "84f91512a9cbfe74b92a83326735b57c47131034, equals prior source_hash -> re-check eligible",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git rev-parse HEAD; git status --porcelain; git diff; git hash-object on target files",
+      "result": "HEAD 9915c72 equals prior verified head; delta = rate.py, settings.py, test_settings.py (content differs from recorded hashes) + untracked test_rate_boundary.py; test_rate.py unchanged",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "Ran 3 tests (test_rate.test_under_and_over_the_limit, test_rate_boundary.test_exactly_burst_is_allowed, test_settings.test_settings): OK; produced untracked __pycache__/ cache only",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v",
+      "result": "3 tests OK",
+      "execution": "executed",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "git show 60a1b09:settings.py",
+      "result": "baseline DEFAULT_TIMEOUT = 30, matching current settings.py:1 (P1 preserved)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git grep -n client_settings / allow_request",
+      "result": "only consumers are tests (test_settings.py, test_rate.py, test_rate_boundary.py); no in-repo consumer broken",
+      "execution": "executed",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "static sabotage analysis: <= -> <, constant True / over-permissive, DEFAULT_TIMEOUT -> 60, DEFAULT_BURST change, drop burst key",
+      "result": "every mutation caught by test_rate_boundary.py:8-9, test_rate.py:9, or test_settings.py:8",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "read rate.py:2 at burst-1, burst, burst+1, 0",
+      "result": "no counterexample to I1",
+      "execution": "static",
+      "run_by": "invariants"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "none configured in the repository; sabotage set reasoned statically by tests reviewer"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [
+    {
+      "reviewer": "invariants",
+      "note": "negative/non-integer inputs are not specified by the contract and were not examined",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "9915c72cfe44d20df2372696776b13b0b31eac52",
+    "files": {
+      "rate.py": "6a4709788c02f35d5a6df1ab2871ece51b35b41a",
+      "settings.py": "71fee848f7d29b21b487e6e03561d032bb52fed0",
+      "test_rate.py": "f1f4a2c80831f823d45ef550aea98c5a5fcc0b8e",
+      "test_settings.py": "6adf7d6d034be51b25189128ec78c843fd1e8df6",
+      "test_rate_boundary.py": "95154bd288169eabd895bd459684e704402cda82"
+    }
+  },
+  "recheck": {
+    "round": 1,
+    "prior_verdict": "FIX REQUIRED",
+    "prior_findings": [
+      {
+        "id": "F1",
+        "resolution": "resolved",
+        "evidence": [
+          "rate.py:2 now returns recent_requests <= burst",
+          "test_rate_boundary.py:8 asserts allow_request(10, 10) is True",
+          "python3 -m unittest -v -> OK"
+        ]
+      },
+      {
+        "id": "F2",
+        "resolution": "resolved",
+        "evidence": [
+          "settings.py:1 now DEFAULT_TIMEOUT = 30",
+          "git show 60a1b09:settings.py -> DEFAULT_TIMEOUT = 30 (baseline)",
+          "test_settings.py:8 asserts timeout 30; python3 -m unittest -v -> OK"
+        ]
+      }
+    ],
+    "roles": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "delta": {
+      "commits": [],
+      "paths": [
+        "rate.py",
+        "settings.py",
+        "test_settings.py",
+        "test_rate_boundary.py"
+      ]
+    },
+    "another_round_required": false
+  },
+  "source_unchanged": true,
+  "minimum_next_action": "None required for the verdict. Commit exactly the verified working-tree content (blob ids in verified_state, including the untracked test_rate_boundary.py; exclude __pycache__/) so the post-commit match holds."
+}

@@ -1,0 +1,223 @@
+{
+  "case_id": "v0.2-multi-trigger-bounded",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "release",
+  "effective_mode": "release",
+  "target": "working-tree diff vs HEAD fd24693 (main; no other base resolved, branch has no commits beyond its base): quota.py, test_quota.py",
+  "scope": {
+    "covered": [
+      "working-tree changes to quota.py (allocate implementation)",
+      "working-tree changes to test_quota.py"
+    ],
+    "not_covered": [
+      "committed baseline fd24693 outside the diff",
+      "consumers of allocate outside this repository (none exist in the repo)",
+      "ignored files under .verify-eval/ (contract source, read only as intent)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.2-multi-trigger-bounded/repo/.verify-eval/task.md",
+    "source_hash": "7446dd32effc6861d31dd0a5303b8c0e081a2b06",
+    "requirements": [
+      "R1: deny when tenant_id is empty with reason 'unauthorized'",
+      "R2: grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise",
+      "R3: response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters"
+    ],
+    "risks": [
+      "quota.allocate tenant guard (authorization denial): high, because a fail-open path would grant quota to an unidentified tenant",
+      "quota.allocate boundary math (inclusive <=): medium, because an off-by-one boundary would wrongly deny or over-grant",
+      "allocate response keys/signature (shared interface): medium, because callers consume the keys; no in-repo consumers"
+    ],
+    "invariants": [
+      "I1: a missing tenant must never reach the quota math",
+      "I2 (derived): a grant never makes current + granted exceed max_allowed"
+    ],
+    "preserved_behaviors": [
+      "P1: allocate(tenant_id, requested, current, max_allowed) positional signature is kept",
+      "P2: response keys {granted, reason, remaining} stay stable for callers"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "deny when tenant_id is empty with reason 'unauthorized'",
+      "result": "PASS",
+      "evidence": "quota.py:2-3; test_quota.py:18-21; lead probe allocate('',100,100,10) -> {'granted':0,'reason':'unauthorized','remaining':100}, allocate(None,1,0,10) -> unauthorized"
+    },
+    {
+      "id": "R2",
+      "text": "grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise",
+      "result": "PASS",
+      "evidence": "quota.py:4-10; test_quota.py:7-16; lead probe allocate('t1',5,5,10) -> granted 5/ok/remaining 0 (inclusive boundary), allocate('t1',6,5,10) -> granted 0/over_quota"
+    },
+    {
+      "id": "R3",
+      "text": "response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters",
+      "result": "PASS",
+      "evidence": "quota.py:3, quota.py:5, quota.py:6-10 return only the three keys; test_quota.py:23-25; remaining values derive only from caller-supplied arguments"
+    },
+    {
+      "id": "I1",
+      "text": "a missing tenant must never reach the quota math",
+      "result": "PASS",
+      "evidence": "quota.py:2-3 returns before quota.py:4; lead probe allocate('',100,100,10) returns unauthorized, not over_quota"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "release baseline",
+    "tests": "release baseline",
+    "regression": "release baseline; allocate's response keys and signature are a shared interface",
+    "invariants": "trigger: inclusive quota boundary (current + requested <= max_allowed) and the I1 ordering rule (tenant check before quota math)",
+    "security": "trigger: authorization/tenancy denial for an empty tenant_id (R1, I1)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v test_quota",
+      "result": "4 tests ran, OK (test_denies_missing_tenant, test_denies_over_quota, test_grants_within_quota, test_response_shape_is_stable)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probes of allocate: ('t1',5,5,10), ('t1',6,5,10), ('',100,100,10), (None,1,0,10), ('t1',0,10,10)",
+      "result": "{5,'ok',0}; {0,'over_quota',5}; {0,'unauthorized',100}; {0,'unauthorized',0}; {0,'ok',0}",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read quota.py:1-10, test_quota.py:1-29 against R1-R3, I1",
+      "result": "every criterion traced to the implementation; no gaps",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "static sabotage analysis of test_quota.py (drop the tenant check, reorder the checks, return a constant ok, change > to >=)",
+      "result": "the first three are caught by test_denies_missing_tenant/test_denies_over_quota; the > to >= boundary shift survives the tests",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "git grep -n allocate; check signature and response keys",
+      "result": "only quota.py and test_quota.py reference allocate; signature order preserved; keys stable",
+      "execution": "static",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "boundary/ordering review of quota.py:2-10 against I1, I2",
+      "result": "no counterexample under contract-defined int inputs",
+      "execution": "static",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "authorization fail-open and response-exposure review of quota.py:2-10",
+      "result": "tenant guard short-circuits before quota math; no fail-open; no fields beyond the contract shape",
+      "execution": "static",
+      "run_by": "security"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation testing",
+      "reason": "no mutation tooling configured in the project; replaced by static sabotage analysis"
+    },
+    {
+      "check": "consumer/integration checks outside the repository",
+      "reason": "no consumers of allocate exist in the repository"
+    }
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts the inclusive grant boundary (current + requested == max_allowed), so a > to >= mutation survives",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_quota.py:7-16",
+        "quota.py:4"
+      ],
+      "failure_mechanism": "boundary shifted to >= -> exact-fit request denied -> no test fails",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: quota.py:4 uses > for deny, and lead probe allocate('t1',5,5,10) grants 5 with 'ok'; the contract names no required test"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "Deny-path tests do not assert the full response shape or remaining, so an R3 violation on deny responses could survive",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "test_quota.py:13-21",
+        "test_quota.py:23-25",
+        "quota.py:3",
+        "quota.py:5"
+      ],
+      "failure_mechanism": "extra/missing key added to a deny response -> shape test only exercises the ok path -> regression survives",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: quota.py:3 and quota.py:5 return exactly {granted, reason, remaining}, confirmed by lead probes"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "The unauthorized response exposes the internal usage counter by returning remaining = current",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "quota.py:3",
+        "lead probe allocate('',100,100,10) -> remaining 100"
+      ],
+      "failure_mechanism": "empty tenant_id -> response echoes current -> counter value disclosed",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "current is an argument the caller supplied; echoing it back to that caller is not exposure of internal state, and the contract names no less-trusted response recipient; remaining on deny is unspecified by the contract"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "regression",
+      "note": "No consumers of allocate outside quota.py/test_quota.py; persisted state, CLI/protocol and out-of-repo consumers could not be examined",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "invariants",
+      "note": "Negative/non-int inputs, concurrency, idempotency and persistence are outside the contract",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "security",
+      "note": "Input-type validation beyond authorization/response shape not examined",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "Test-suite craftsmanship and style beyond acceptance evidence",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "fd24693156feb421e3d012fc9161999d4e558826",
+    "files": {
+      "quota.py": "4c212236b9734cbfda3b2166f2ef1bd872d26c5c",
+      "test_quota.py": "4f6716241df8e332860419f13043b88119c4e2de"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required for the verdict. Optionally add an exact-fit boundary test (allocate('t1',5,5,10)) and shape assertions on deny responses to harden the tests."
+}

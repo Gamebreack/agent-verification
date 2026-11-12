@@ -801,6 +801,14 @@ class ManifestExpectationTest(SyntheticCaseTest):
         self.assertFalse(eval_harness.finding_matches({**actual, "proposed_severity": "SHOULD_FIX"}, expected))
         self.assertFalse(eval_harness.finding_matches({k: v for k, v in actual.items() if k != "proposed_severity"}, expected))
 
+    def test_criterion_linked_finding_resolves_through_criteria_text(self) -> None:
+        actual = {"status": "VALIDATED", "requirement_or_invariant": "A1", "severity": "SHOULD_FIX"}
+        expected = {"requirement_or_invariant": ["R2"]}
+        covers = [{"id": "A1", "text": "A1 (R2, I1): last name is kept"}]
+        self.assertTrue(eval_harness.finding_matches(actual, expected, covers))
+        self.assertFalse(eval_harness.finding_matches(actual, expected, [{"id": "A1", "text": "A1: unrelated"}]))
+        self.assertFalse(eval_harness.finding_matches(actual, expected))
+
     def test_expected_finding_id_must_match_and_name_a_prior_finding(self) -> None:
         actual = {"id": "F2", "status": "VALIDATED", "severity": "OPTIONAL", "claim": "message omits text"}
         self.assertTrue(eval_harness.finding_matches(actual, {"id": "F2", "severities": ["OPTIONAL"]}))

@@ -1,0 +1,346 @@
+{
+  "date": "2026-11-11",
+  "skill_version": "0.5.0 (unreleased, branch feat/v0.5-review-lifecycle, commit 1bbc722 + review fixes)",
+  "host": "OpenCode (`opencode run --format json --auto --archived`), primary agent = operator's default orchestrator, reviewers = its role subagents (no reviewer shell)",
+  "model": "not emitted in the event stream; the configured preset uses an Opus-class model; no model id is asserted",
+  "reviewer_shell": false,
+  "structural_validation": "PASS (28 cases)",
+  "scoring": {
+    "raw": {
+      "cases": 28,
+      "matched": 24,
+      "mismatched": 4,
+      "false_negatives": 0,
+      "mismatches": {
+        "acceptance-omission": "missing semantic finding: omitted-last-name (linked via A1; scorer fix a / fixture fix b)",
+        "boundary-inversion": "missing semantic finding: exclusive-capacity-boundary",
+        "duplicate-event": "source_unchanged must be true",
+        "v0.5-green-claim-false": "missing semantic finding: full-discount-rejected (criterion-id link; scorer fix a)"
+      }
+    },
+    "corrected": {
+      "cases": 28,
+      "matched": 26,
+      "mismatched": 2,
+      "false_negatives": 0,
+      "mismatches": {
+        "boundary-inversion": "the finding says strict `<`, which is not in the case's terms_any; kept strict",
+        "duplicate-event": "source_unchanged false because untracked caches were counted"
+      }
+    },
+    "corrected_with_rerun": {
+      "cases": 28,
+      "matched": 27,
+      "mismatched": 1,
+      "false_negatives": 0,
+      "mismatches": {
+        "boundary-inversion": "the finding says strict `<`, which is not in the case's terms_any; kept strict"
+      },
+      "rerun": "duplicate-event re-run after the json-report.md wording fix (untracked caches do not make source_unchanged false): PASS; report in evals/runs/2026-11-11-opencode-rerun/duplicate-event.json"
+    }
+  },
+  "method": {
+    "delegation_depth": 1,
+    "fixes_after_run": [
+      "Scorer now resolves criterion-id links (A1) through the criteria text; the schema already allowed A1.",
+      "The acceptance-omission fixture now accepts R1 or R2.",
+      "json-report.md wording fix: untracked caches do not make source_unchanged false."
+    ],
+    "notes": [
+      "Raw scoring is as first scored during the run. Corrected scoring re-runs `eval_harness.py check <case> <report> <repo>` against the retained fixture state after three post-run changes: (a) the scorer resolves criterion-id links (A1) through criteria text; (b) the acceptance-omission fixture accepts R1 or R2; (c) a json-report.md wording fix (untracked caches do not make source_unchanged false), after which duplicate-event was re-run on OpenCode.",
+      "Remaining mismatches are kept strict, not loosened to fit.",
+      "No false negatives: every seeded defect was detected.",
+      "v0.4 runs are history and are not re-scored under v0.5.",
+      "Per-case reports are the host's output with one redaction: the absolute eval-directory prefix replaced by `<eval-dir>`."
+    ]
+  },
+  "summary": {
+    "cases": 28,
+    "matched_raw": 24,
+    "matched_corrected": 26,
+    "matched_corrected_with_rerun": 27,
+    "false_negatives": 0
+  },
+  "behavioral_cases": [
+    {
+      "id": "acceptance-omission",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "FAIL",
+      "corrected_check": "PASS",
+      "raw_check_output": "FAIL: missing semantic finding: omitted-last-name"
+    },
+    {
+      "id": "bogus-mock",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: bogus-mock matched its semantic expectations"
+    },
+    {
+      "id": "boundary-inversion",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "FAIL",
+      "corrected_check": "FAIL",
+      "raw_check_output": "FAIL: missing semantic finding: exclusive-capacity-boundary"
+    },
+    {
+      "id": "contract-regression",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: contract-regression matched its semantic expectations"
+    },
+    {
+      "id": "correct-low-risk",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: correct-low-risk matched its semantic expectations"
+    },
+    {
+      "id": "duplicate-event",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "FAIL",
+      "corrected_check": "FAIL",
+      "raw_check_output": "FAIL: source_unchanged must be true"
+    },
+    {
+      "id": "speculative-non-issue",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: speculative-non-issue matched its semantic expectations"
+    },
+    {
+      "id": "tenant-authorization",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "degraded independence",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: tenant-authorization matched its semantic expectations"
+    },
+    {
+      "id": "unavailable-service",
+      "verdict": "INCONCLUSIVE",
+      "expected": "INCONCLUSIVE",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: unavailable-service matched its semantic expectations"
+    },
+    {
+      "id": "v0.2-multi-trigger-bounded",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.2-multi-trigger-bounded matched its semantic expectations"
+    },
+    {
+      "id": "v0.2-pure-formatter-no-overflow",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.2-pure-formatter-no-overflow matched its semantic expectations"
+    },
+    {
+      "id": "v0.2-retry-idempotency",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.2-retry-idempotency matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-base-origin-head",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "degraded independence",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-base-origin-head matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-branch-commits",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-branch-commits matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-code-claims-contract-outdated",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-code-claims-contract-outdated matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-contract-premise-false",
+      "verdict": "INCONCLUSIVE",
+      "expected": "INCONCLUSIVE",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-contract-premise-false matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-green-claim-false",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "FAIL",
+      "corrected_check": "PASS",
+      "raw_check_output": "FAIL: missing semantic finding: full-discount-rejected"
+    },
+    {
+      "id": "v0.5-no-shell-reviewers",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-no-shell-reviewers matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-out-of-mandate-lead",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-out-of-mandate-lead matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-plan-artifact",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-plan-artifact matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-quick-security-escalation",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-quick-security-escalation matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-recheck-fixed",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-recheck-fixed matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-recheck-new-defect",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-recheck-new-defect matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-recheck-optional-only",
+      "verdict": "PASS WITH NOTES",
+      "expected": "PASS WITH NOTES",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-recheck-optional-only matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-recheck-unfixed-outside-delta",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-recheck-unfixed-outside-delta matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-security-retained",
+      "verdict": "PASS WITH NOTES",
+      "expected": "PASS WITH NOTES",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-security-retained matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-severity-downgrade",
+      "verdict": "FIX REQUIRED",
+      "expected": "FIX REQUIRED",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-severity-downgrade matched its semantic expectations"
+    },
+    {
+      "id": "v0.5-staged-differs",
+      "verdict": "PASS",
+      "expected": "PASS",
+      "verdict_matched": true,
+      "assurance": "independent panel",
+      "raw_check": "PASS",
+      "corrected_check": "PASS",
+      "raw_check_output": "PASS: v0.5-staged-differs matched its semantic expectations"
+    }
+  ]
+}

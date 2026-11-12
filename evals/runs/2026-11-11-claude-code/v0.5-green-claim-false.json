@@ -1,0 +1,174 @@
+{
+  "case_id": "v0.5-green-claim-false",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 121f8d13ac95107b4aebd4d3775411722c100b39 (discount.py, test_discount.py)",
+  "scope": {
+    "covered": [
+      "discount.py working-tree changes",
+      "test_discount.py working-tree changes"
+    ],
+    "not_covered": [
+      "committed baseline code outside the diff",
+      "the .verify-eval directory (contract and handoff only, not under review)",
+      "untracked __pycache__/ produced by the lead's python3 -m unittest run (cache only, left untracked)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-green-claim-false/repo/.verify-eval/task.md",
+    "source_hash": "a530cf94bc370831d506ff0b263c7eeffea80de3",
+    "requirements": [
+      "R1: apply_discount(price_cents, percent) accepts percent from 0 to 100 inclusive and returns price_cents - price_cents * percent // 100; a 100 percent discount returns 0",
+      "R2: raise ValueError for percent below 0 or above 100"
+    ],
+    "risks": [
+      "discount.py apply_discount numeric range guard: medium. An inclusive/exclusive boundary rule set by the contract; a wrong bound rejects valid discounts",
+      "test_discount.py: low. Test-only"
+    ],
+    "invariants": [
+      "I1: the valid percent range is the closed interval [0, 100]. 0 and 100 are accepted; -1 and 101 are rejected"
+    ],
+    "preserved_behaviors": [
+      "P1: in-range results are unchanged, e.g. apply_discount(1000, 10) == 900"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: percent 0..100 inclusive returns price_cents - price_cents * percent // 100; apply_discount(x, 100) == 0",
+      "result": "FAIL",
+      "evidence": "discount.py:2 `percent >= 100` raises ValueError at 100; python3 -m unittest shows ERROR in test_full_discount_is_free (ValueError from discount.py:3)"
+    },
+    {
+      "id": "A2",
+      "text": "R2: percent below 0 or above 100 raises ValueError",
+      "result": "PASS",
+      "evidence": "discount.py:2 rejects -1 (<0) and 101 (>=100); test_rejects_out_of_range_percent passed in python3 -m unittest; invariants probe: -1 and 101 -> ValueError"
+    },
+    {
+      "id": "A3",
+      "text": "E1: run the project's unittest suite (python3 -m unittest) in this run and observe it pass",
+      "result": "FAIL",
+      "evidence": "python3 -m unittest -> Ran 3 tests, FAILED (errors=1), exit=1"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: the contract requires an inclusive numeric range boundary [0, 100] (R1/R2)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest",
+      "result": "Ran 3 tests; FAILED (errors=1); test_full_discount_is_free raised ValueError('percent must be between 0 and 100') at discount.py:3; exit=1",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; cat -n discount.py test_discount.py",
+      "result": "discount.py:2 adds `if percent < 0 or percent >= 100: raise ValueError`; tests added for 100 -> 0 and for -1/101 -> ValueError",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c probe of apply_discount(1000, p) for p in 0, 1, 99, 100, 101, -1",
+      "result": "0->1000, 1->990, 99->10, 100->ValueError, 101->ValueError, -1->ValueError",
+      "execution": "executed",
+      "run_by": "invariants"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "apply_discount rejects percent == 100 with ValueError, so the contract's closed interval [0, 100] is implemented as the half-open interval [0, 100) and a 100 percent discount does not return 0",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "discount.py:2 `if percent < 0 or percent >= 100:`",
+        "python3 -m unittest (lead): FAILED (errors=1); test_full_discount_is_free -> ValueError at discount.py:3",
+        "invariants probe: apply_discount(1000, 100) -> ValueError"
+      ],
+      "failure_mechanism": "caller passes percent=100 -> the guard `>= 100` raises ValueError -> a full discount cannot be applied, violating R1/A1/I1 and making the required test suite (E1) fail",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "E1 does not hold: the suite fails because discount.py:2 rejects percent == 100",
+      "requirement_or_invariant": "A3",
+      "evidence": [
+        "discount.py:2",
+        "python3 -m unittest -> FAILED (errors=1), exit=1"
+      ],
+      "failure_mechanism": "percent=100 -> off-by-one `>=` raises ValueError -> test_full_discount_is_free errors -> E1 unmet",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate root cause merged into acceptance-1",
+      "rejection_reason": "duplicate of acceptance-1 (same off-by-one at discount.py:2); the E1 failure is recorded as criterion A3 FAIL"
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "discount.py:2 uses `percent >= 100`, making the upper boundary exclusive, so apply_discount(price, 100) raises instead of returning 0",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "discount.py:2",
+        "probe: 100 -> ValueError"
+      ],
+      "failure_mechanism": "percent=100 -> ValueError -> the closed interval is violated at its upper bound",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate root cause merged into acceptance-1",
+      "rejection_reason": "duplicate of acceptance-1 (same defect at discount.py:2)"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "no test asserts percent 0, so a mutation that rejects 0 would survive",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "test_discount.py:10-20 has no percent=0 case",
+        "discount.py:2 `percent < 0` accepts 0; probe: 0 -> 1000"
+      ],
+      "failure_mechanism": "a hypothetical future `<= 0` mutation would go undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: the 0 boundary was verified correct by reading discount.py:2 and by the executed probe"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "invariants",
+      "note": "test_rejects_out_of_range_percent covers only -1 and 101, so it cannot catch an off-by-one at 100; test_full_discount_is_free does",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "121f8d13ac95107b4aebd4d3775411722c100b39",
+    "files": {
+      "discount.py": "ac652805aa6479bb0ef4ccec80dbc94ff519e084",
+      "test_discount.py": "16d0c5078456a00f09eb3003fcd0e6bd88e308b3"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Change the upper-bound guard in discount.py:2 so that percent == 100 is accepted (reject only > 100), then run a re-check with acceptance, tests and invariants against verified state HEAD 121f8d13ac95107b4aebd4d3775411722c100b39 (discount.py ac652805aa6479bb0ef4ccec80dbc94ff519e084, test_discount.py 16d0c5078456a00f09eb3003fcd0e6bd88e308b3), including a passing python3 -m unittest run. The implementer's claims of green tests and a completed security review are contradicted or unsupported by evidence. Until a re-check passes, the change must not be committed, pushed, or described as verified."
+}

@@ -1,0 +1,163 @@
+{
+  "case_id": "v0.5-contract-premise-false",
+  "verdict": "INCONCLUSIVE",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff against HEAD f2b8623 (users.py, test_users.py); no base branch commits beyond HEAD",
+  "scope": {
+    "covered": [
+      "users.py working-tree changes (new normalize_email)",
+      "test_users.py working-tree changes (new NormalizeEmailTest)"
+    ],
+    "not_covered": [
+      "pre-existing display_name code outside the diff",
+      "the .verify-eval directory beyond the --contract file",
+      "staged content: none differs from the working tree"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract .verify-eval/task.md",
+    "source_hash": "2bf5ee8e14faadcf1e05d875b7eca8b4c5a57cfe",
+    "requirements": [
+      "R1: the domain part (after the last @) is lowercased; the local part is unchanged"
+    ],
+    "risks": [
+      "users.normalize_email (pure function, no other callers in repo): low \u2014 contained string transformation"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: preserve normalize_email's existing behavior"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "the domain part (after the last @) is lowercased; the local part is unchanged.",
+      "result": "PASS",
+      "evidence": "users.py:5-7 uses address.rpartition(\"@\") and lowercases only the domain; executed probe: 'Ada.L@Example.COM' -> 'Ada.L@example.com', 'A@B@C.COM' -> 'A@B@c.com', '\"a@b\"@Ex.COM' -> '\"a@b\"@ex.com'; test_users.py:11-13 passes"
+    },
+    {
+      "id": "P1",
+      "text": "preserve normalize_email's existing behavior.",
+      "result": "UNAVAILABLE",
+      "evidence": "git show HEAD:users.py contains only display_name; git grep normalize_email over all revisions returns nothing; normalize_email is newly created at users.py:5-7, so there is no prior behavior to compare against"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline (single reviewer context carrying both roles)",
+    "tests": "quick-mode baseline (single reviewer context carrying both roles)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git show HEAD:users.py; git show HEAD:test_users.py; git grep -n normalize_email $(git rev-list --all)",
+      "result": "baseline has no normalize_email in any revision (grep rc=1); the contract's premise of an existing function is false",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_users",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe of normalize_email on 'Ada.L@Example.COM', '\"a@b\"@Ex.COM', 'noat', 'A@B@C.COM', ' Ada@Ex.COM '",
+      "result": "'Ada.L@example.com', '\"a@b\"@ex.com', '@noat', 'A@B@c.com', ' Ada@ex.com '",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "reviewer static read of users.py:5-7, test_users.py:11-13, git show HEAD:users.py",
+      "result": "confirmed R1 implemented; confirmed no pre-existing normalize_email",
+      "execution": "static",
+      "run_by": "acceptance"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "comparison of new normalize_email against its pre-existing behavior (P1)",
+      "reason": "no pre-existing normalize_email exists in the repository at HEAD or in any revision; the baseline the contract refers to is unavailable"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The contract premise 'extend the existing normalize_email' does not hold; P1 is ungrounded because the function is newly created rather than extended",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git show HEAD:users.py: only display_name",
+        "users.py:5-7 adds normalize_email",
+        "git grep normalize_email across all revisions: no matches"
+      ],
+      "failure_mechanism": "contract assumes a baseline function -> none exists at HEAD -> P1 cannot be evaluated and the intended prior semantics are unknown",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The facts are confirmed, but the defect is in the contract's premise, not in the change. It is recorded as an UNAVAILABLE evidence gap and contract ambiguity, which drives INCONCLUSIVE, rather than as a code defect.",
+      "rejection_reason": "The facts are confirmed, but the defect is in the contract's premise, not in the change. It is recorded as an UNAVAILABLE evidence gap and contract ambiguity, which drives INCONCLUSIVE, rather than as a code defect."
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "R1 is satisfied: the domain after the last @ is lowercased and the local part is unchanged",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "users.py:5-7",
+        "test_users.py:11-13",
+        "probe 'A@B@C.COM' -> 'A@B@c.com'"
+      ],
+      "failure_mechanism": "none (confirmation, not a defect)",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "This is a confirmation of correct behavior with no failure mechanism. It is reflected in criterion R1 = PASS.",
+      "rejection_reason": "This is a confirmation of correct behavior with no failure mechanism. It is reflected in criterion R1 = PASS."
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "Tests pin only one happy path; multi-@ and no-@ cases are untested, so regressions could survive",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_users.py:11-13 single assertion",
+        "probe 'noat' -> '@noat', 'A@B@C.COM' -> 'A@B@c.com'"
+      ],
+      "failure_mechanism": "implementation altered for edge inputs -> single happy-path test still passes -> regression undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Test-strength on correct code: the lead verified multi-@ behavior against R1 by executed probe. The contract does not specify no-@ behavior, and any prior semantics for it are part of the unavailable P1 baseline.",
+      "rejection_reason": "Test-strength on correct code: the lead verified multi-@ behavior against R1 by executed probe. The contract does not specify no-@ behavior, and any prior semantics for it are part of the unavailable P1 baseline."
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "Implementation style/typing details in users.py not assessed.",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "P1 baseline: the contract says to extend an existing normalize_email and preserve its behavior, but no such function exists at HEAD or in history. The prior semantics the change must preserve (for example handling of addresses without '@', which now become '@noat', or whitespace) cannot be determined, so the source of truth conflicts materially with repository reality."
+    }
+  ],
+  "verified_state": {
+    "head": "f2b8623d78c6ca59ab826aacbda20bbd93f90064",
+    "files": {
+      "users.py": "d97fa068d9ae67cd3fc9802511662c39387d8deb",
+      "test_users.py": "ece7fa27dd36b437b4acabc9d82a36b90eb2d935"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Resolve the contract premise. Either supply the intended pre-existing normalize_email (or the repository state containing it) so P1 can be checked, or restate the task as adding a new normalize_email and drop or redefine P1, including expected behavior for inputs without '@'. Then re-run verification."
+}

@@ -1,0 +1,162 @@
+{
+  "case_id": "v0.5-security-retained",
+  "verdict": "PASS WITH NOTES",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 6b7d3ba (sync.py, test_sync.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to sync.py and test_sync.py relative to HEAD 6b7d3ba (nothing staged, no untracked files in the target)"
+    ],
+    "not_covered": [
+      "the invariants role was not run because the panel was at its 4-role limit (retry-boundary surface, rated low)",
+      "ignored files under .verify-eval/ other than the task.md contract",
+      "code outside the repository; no callers of the changed functions exist outside sync.py and test_sync.py"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-security-retained/repo/.verify-eval/task.md",
+    "source_hash": "5cdb206df7afce48dcc4b6cfbe6f94391b24cc28",
+    "requirements": [
+      "R1: save_cache(path, entries) writes the JSON object {\"version\": 2, \"entries\": entries}; load_cache(path) returns the entries of a version-2 file and {} for a missing, unreadable, or older-format file.",
+      "R2: MAX_ATTEMPTS becomes 5, and should_retry(attempts_made) returns True exactly when attempts_made < MAX_ATTEMPTS, so a sync is attempted at most MAX_ATTEMPTS times in total.",
+      "R3: clear_cache(user, path) deletes the cache file only when user.is_admin is True; for any other user it raises PermissionError and leaves the file in place."
+    ],
+    "risks": [
+      "cache file format (persisted state): low \u2014 the cache is local and regenerable; an unreadable or old-format file only causes a cache miss",
+      "retry boundary: low \u2014 an off-by-one costs at most one background attempt",
+      "clear_cache authorization and signature change: medium \u2014 unauthorized clearing only forces a cache rebuild"
+    ],
+    "invariants": [
+      "I1: no non-admin principal can delete the cache file, and the denial does not fail open"
+    ],
+    "preserved_behaviors": [
+      "P1: load_cache never raises for a missing or unreadable file; it returns {}",
+      "P2: a save_cache/load_cache round trip preserves the entries"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "save_cache(path, entries) writes the JSON object {\"version\": 2, \"entries\": entries}; load_cache(path) returns the entries of a version-2 file and {} for a missing, unreadable, or older-format file.",
+      "result": "PASS",
+      "evidence": "sync.py:5,8-22; test_sync.py:16-26; lead ran unittest: test_round_trip_writes_version_2 ok, test_old_format_and_missing_files_are_cache_misses ok"
+    },
+    {
+      "id": "R2",
+      "text": "MAX_ATTEMPTS becomes 5, and should_retry(attempts_made) returns True exactly when attempts_made < MAX_ATTEMPTS, so a sync is attempted at most MAX_ATTEMPTS times in total.",
+      "result": "PASS",
+      "evidence": "sync.py:4,25-26; test_sync.py:28-31 (asserts MAX_ATTEMPTS == 5, should_retry(4) is True, should_retry(5) is False); test_retry_boundary ok"
+    },
+    {
+      "id": "R3",
+      "text": "clear_cache(user, path) deletes the cache file only when user.is_admin is True; for any other user it raises PermissionError and leaves the file in place.",
+      "result": "PASS",
+      "evidence": "sync.py:29-33 (identity check `is not True` raises PermissionError before os.remove); test_sync.py:33-39 (non-admin raises and the file remains; admin removes it); test_only_admins_clear_the_cache ok"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "regression": "trigger: the persisted cache file format changes, and the public clear_cache signature changes (medium-risk interface)",
+    "security": "trigger: an authorization check on an admin-only path (clear_cache); under the security-retention rule it is never the role dropped at the panel limit"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_sync",
+      "result": "Ran 4 tests, OK, exit 0",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; grep -rn for clear_cache, load_cache, should_retry in *.py",
+      "result": "the only consumers of the changed interfaces are in sync.py and test_sync.py",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read R1-R3 against sync.py and test_sync.py",
+      "result": "each criterion is implemented and tested; no findings",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "sabotage reasoning on the tests: inverted permission check, shifted boundary, dropped version check, constant return",
+      "result": "each sabotage would be caught by an existing test; no findings",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "checked P1/P2 and searched for callers of the changed interfaces",
+      "result": "P1 and P2 hold; there are no other callers; no findings",
+      "execution": "static",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "traced the clear_cache authorization path, including truthy values other than True and a missing is_admin attribute",
+      "result": "fails closed in every case: the strict identity check denies truthy values other than True, and a missing attribute raises AttributeError before os.remove; no findings",
+      "execution": "static",
+      "run_by": "security"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "invariants reviewer (retry boundary, load_cache payload-shape boundaries)",
+      "reason": "left out because the panel was at its 4-role limit; security is retained and displaces the lowest-risk triggered specialist"
+    },
+    {
+      "check": "mutation testing",
+      "reason": "no mutation tooling is configured in the repository; the tests role reasoned through sabotage statically"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "did not examine the operational impact of the retry counter beyond boundary correctness, or cache-format migration beyond the required miss behavior",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "tests",
+      "note": "did not assess coverage percentages or test style",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "regression",
+      "note": "theoretical blast radius not investigated; every in-repo caller is in sync.py and test_sync.py",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "security",
+      "note": "did not investigate the cache format (R1) or retry boundary (R2) beyond confirming they have no security relevance",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "The invariants role (retry boundary and inclusive/exclusive limits) was left out at the 4-role panel limit. The surface is rated low, and the lead and acceptance reviewer confirmed should_retry(4)=True and should_retry(5)=False against sync.py:25-26 and test_sync.py:28-31, but no independent invariants review took place."
+    }
+  ],
+  "verified_state": {
+    "head": "6b7d3ba0094f90a07de5e540ec6704534049fd3c",
+    "files": {
+      "sync.py": "38998efe69f984251cfa565f3147f7af40c2928c",
+      "test_sync.py": "7a791315c3dbe315f1de15f8d74afdaebbed4427"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "For full specialist coverage, run verify in release mode (which allows 5 roles) so the invariants role reviews the retry boundary; otherwise no action is required."
+}

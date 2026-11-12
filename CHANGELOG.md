@@ -8,9 +8,25 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Adjudication re-derives mechanisms from evidence:** the gate no longer takes a reviewer's stated mechanism on trust. It re-derives it from the evidence alone (shared-premise test; a caller echo or a weak test is not a mechanism).
 - **Test-strength rule:** a wrong test is a defect; a test the contract names but that is absent is MISSING; a mocked test on broken code counts as merged evidence; a weak test on correct code is a NON_ISSUE.
 - **Invariants trigger guard in panel selection:** a numeric parameter, format width or input-type statement is no longer an invariants trigger by itself; the trigger is a range, boundary, ordering or state rule the contract requires. A trivial pure formatter now gets exactly the acceptance and tests reviewers.
+- **Branch-aware default target:** with no target given, the skill chooses between the working tree, staged changes, branch commits against the base, and the origin head, and states the choice and its scope (covered and not covered) in the report.
+- **Verdict and severity discipline:** the verdict follows from the validated findings; a severity may be downgraded only with stated evidence, and an unmet contract premise is reported rather than silently absorbed.
+- **Reviewer briefs are clean:** reviewers get only the contract, the diff and their role; the contract is immutable once reviewers start, and a lead acting outside the contract's mandate is reported.
 
 ### Added
+- **Re-check loop:** after fixes, a re-check re-runs the roles against prior findings; a prior report is eligible only when its contract hash matches. It records each prior finding's resolution with evidence, new defects, and the unresolved set; it has explicit stop and no-ship rules, including optional-only and unfixed-outside-delta cases.
+- **Fixed report header:** every report opens with the same verdict header (verdict, assurance, mode, target, scope).
+- **Executed vs static evidence:** each piece of evidence is labelled executed or static; a capability check records whether reviewers could run anything (no reviewer shell), and a green-claim is not accepted without executed evidence.
+- **Security retention and quick escalation:** a security finding stays open across re-checks until resolved, and a quick-mode run that touches a security surface escalates instead of passing.
+- **Plan and document targets**, and a `verified_state` field recording what exactly was verified.
+- **Harness layers, state guard and guards:** the harness scores in layers, guards against a changed source state, and adds checks for the new report fields.
+- **16 new fixtures** (28 in total) covering the above.
+- **v0.5 behavioral runs on two hosts (all 28 fixtures, no false negatives):** OpenCode 24/28 raw, 26/28 corrected, 27/28 after a `duplicate-event` re-run; Claude Code 25/28 raw, 27/28 corrected. Records are [`evals/runs/2026-11-11-opencode.json`](evals/runs/2026-11-11-opencode.json) and [`evals/runs/2026-11-11-claude-code.json`](evals/runs/2026-11-11-claude-code.json).
 - **Cross-host behavioral eval records:** all 12 fixtures run headless on OpenCode (11/12) and Antigravity (10/12), with no false negatives on either host, plus Claude Code reruns after the adjudication and trigger changes. Records are under `evals/runs/` and summarized in `docs/evaluation.md`.
+
+### Fixed
+- **Scorer resolves criterion-id links:** a finding linked to a criterion id (for example A1) is now resolved through the criteria text, as the schema already allowed.
+- **acceptance-omission fixture** accepts R1 or R2 as the violated requirement.
+- **`json-report.md` wording:** untracked caches (such as `__pycache__`) do not make `source_unchanged` false.
 
 ## [0.4.0] - 2026-09-27
 

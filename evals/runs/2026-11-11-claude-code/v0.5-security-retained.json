@@ -1,0 +1,283 @@
+{
+  "case_id": "v0.5-security-retained",
+  "verdict": "PASS WITH NOTES",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 4250c1e (sync.py, test_sync.py)",
+  "scope": {
+    "covered": [
+      "sync.py working-tree changes: save_cache/load_cache v2 format, MAX_ATTEMPTS/should_retry, clear_cache admin check",
+      "test_sync.py working-tree changes"
+    ],
+    "not_covered": [
+      "Callers outside this repository (none tracked in the repo)",
+      "The invariants reviewer role was left out because the panel was at its maximum (see evidence_gaps)",
+      "No staged content differs from the working tree (git diff --cached is empty)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-security-retained/repo/.verify-eval/task.md",
+    "source_hash": "5cdb206df7afce48dcc4b6cfbe6f94391b24cc28",
+    "requirements": [
+      "R1: save_cache(path, entries) writes the JSON object {\"version\": 2, \"entries\": entries}; load_cache(path) returns the entries of a version-2 file and {} for a missing, unreadable, or older-format file.",
+      "R2: MAX_ATTEMPTS becomes 5, and should_retry(attempts_made) returns True exactly when attempts_made < MAX_ATTEMPTS, so a sync is attempted at most MAX_ATTEMPTS times in total.",
+      "R3: clear_cache(user, path) deletes the cache file only when user.is_admin is True; for any other user it raises PermissionError and leaves the file in place."
+    ],
+    "risks": [
+      "cache file format (persisted state): low, because the cache is local and regenerable and a bad file only causes a cache miss",
+      "retry counter (inclusive/exclusive boundary): low, because an off-by-one costs at most one background attempt more or less",
+      "clear_cache admin-only check (authorization; public signature change): medium, because unauthorized clearing forces a cache rebuild"
+    ],
+    "invariants": [
+      "I1: a non-admin clear_cache never removes the file (denial fails closed)",
+      "I2: load_cache never raises for a missing, unreadable, or old-format file",
+      "I3: should_retry(n) is True iff n < MAX_ATTEMPTS"
+    ],
+    "preserved_behaviors": [
+      "P1: load_cache returns {} on OSError or invalid JSON",
+      "P2: clear_cache by an admin on a missing file is a no-op",
+      "P3: a save_cache/load_cache round-trip returns the saved entries"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: save_cache(path, entries) writes the JSON object {\"version\": 2, \"entries\": entries}; load_cache(path) returns the entries of a version-2 file and {} for a missing, unreadable, or older-format file.",
+      "result": "PASS",
+      "evidence": "sync.py:5,10 write {version: CACHE_VERSION=2, entries}; sync.py:14-22 return {} on OSError/ValueError, non-dict data, version != 2, or non-dict entries; test_sync.py test_round_trip_writes_version_2 and test_old_format_and_missing_files_are_cache_misses pass (python3 -m unittest -v test_sync: OK)"
+    },
+    {
+      "id": "A2",
+      "text": "R2: MAX_ATTEMPTS becomes 5, and should_retry(attempts_made) returns True exactly when attempts_made < MAX_ATTEMPTS, so a sync is attempted at most MAX_ATTEMPTS times in total.",
+      "result": "PASS",
+      "evidence": "sync.py:4 MAX_ATTEMPTS = 5; sync.py:26 returns attempts_made < MAX_ATTEMPTS; test_retry_boundary asserts should_retry(4) True and should_retry(5) False (OK); a reviewer probe of should_retry(0..6) gave [T,T,T,T,T,F,F]"
+    },
+    {
+      "id": "A3",
+      "text": "R3: clear_cache(user, path) deletes the cache file only when user.is_admin is True; for any other user it raises PermissionError and leaves the file in place.",
+      "result": "PASS",
+      "evidence": "sync.py:29-31 raises PermissionError when user.is_admin is not True, before os.remove at sync.py:32-33; test_only_admins_clear_the_cache (OK); security probe: is_admin False/1/\"yes\"/None -> PermissionError with the file kept, True -> file removed"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline",
+    "regression": "trigger: persisted state (cache file format change) and a public interface signature change (clear_cache gains a user parameter; the medium-risk authorization surface)",
+    "security": "trigger: authorization (admin-only clear_cache). Under the security-retention rule it is kept at the panel bound"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_sync",
+      "result": "Ran 4 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; grep for callers of clear_cache/load_cache/should_retry",
+      "result": "Only definitions in sync.py and uses in test_sync.py; no other callers",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -I probe of clear_cache with is_admin in {False, 1, \"yes\", None, True}, a missing attribute, and user=None",
+      "result": "Non-True values -> PermissionError with the file kept; True -> file removed; missing attribute or None -> AttributeError with the file kept (fails closed)",
+      "execution": "executed",
+      "run_by": "security"
+    },
+    {
+      "command_or_inspection": "python3 -I probes for P1/P2/P3/I1/I2/I3 (invalid UTF-8, malformed JSON, directory path, JSON list, version-2 file with list entries, admin clear of a missing file, should_retry 0..6)",
+      "result": "All preserved behaviors and invariants hold",
+      "execution": "executed",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest test_sync, plus an edge-case probe script",
+      "result": "4 tests OK; A1-A3 edge cases behave as the contract requires",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "8 sabotage mutants of sync.py run against test_sync in temporary copies outside the repo",
+      "result": "6 of 8 mutants survived (narrowed except clause, removed isinstance check, truthiness admin check, removed exists guard, removed version check); the current code behaves correctly on all of these cases",
+      "execution": "executed",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "invariants-role review of the retry boundary (R2/I3)",
+      "reason": "Role left out at the panel maximum of 4: security retention displaced the lowest-risk triggered specialist (retry counter, rated low)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "security-1",
+      "status": "NON_ISSUE",
+      "reviewer": "security",
+      "claim": "clear_cache raises AttributeError, not PermissionError, when the user object has no is_admin attribute or is None",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "sync.py:30 reads user.is_admin directly",
+        "probe: SimpleNamespace() and None -> AttributeError, file still exists"
+      ],
+      "failure_mechanism": "principal without is_admin -> AttributeError before os.remove -> file kept (fails closed); a caller that catches only PermissionError sees a different exception",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The contract defines a user by user.is_admin; an object without that attribute (or None) is an input the contract excludes, and denial still fails closed, so I1 holds",
+      "rejection_reason": "The contract defines a user by user.is_admin; an object without that attribute (or None) is an input the contract excludes, and denial still fails closed, so I1 holds"
+    },
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "clear_cache raises AttributeError, not PermissionError, for a user object without is_admin or user=None",
+      "requirement_or_invariant": "A3",
+      "evidence": [
+        "sync.py:30",
+        "probe: object without is_admin -> AttributeError, file exists True"
+      ],
+      "failure_mechanism": "anonymous/None user -> AttributeError escapes -> a PermissionError handler misses it; the file is preserved",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of security-1 (same root cause); merged and rejected for the same reason",
+      "rejection_reason": "Duplicate of security-1 (same root cause); merged and rejected for the same reason"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test runs load_cache on corrupt or non-dict JSON, so breaking the never-raises path still passes",
+      "requirement_or_invariant": "I2",
+      "evidence": [
+        "mutants except OSError only and removed isinstance(data, dict): unittest OK"
+      ],
+      "failure_mechanism": "corrupt or list cache file -> raises -> the sync crashes while CI stays green",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: sync.py:17-20 handle these cases, as reviewer probes confirm; the contract's required evidence does not name corrupt-file tests",
+      "rejection_reason": "test-strength on correct code: sync.py:17-20 handle these cases, as reviewer probes confirm; the contract's required evidence does not name corrupt-file tests"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The admin test uses only is_admin False/True, so a truthiness check would survive",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "mutant 'not user.is_admin': unittest OK"
+      ],
+      "failure_mechanism": "is_admin=1 or \"false\" -> would pass a loosened check -> a non-admin clears the cache",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: sync.py:30 uses an identity check against True; the probe shows 1 and \"yes\" are denied",
+      "rejection_reason": "test-strength on correct code: sync.py:30 uses an identity check against True; the probe shows 1 and \"yes\" are denied"
+    },
+    {
+      "id": "tests-3",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers an admin clearing a missing file, so removing the exists guard still passes",
+      "requirement_or_invariant": "P2",
+      "evidence": [
+        "mutant 'if True:' at sync.py:32: unittest OK"
+      ],
+      "failure_mechanism": "admin clears an absent cache -> FileNotFoundError, undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: the sync.py:32 guard is unchanged from HEAD and the probe confirms the no-op",
+      "rejection_reason": "test-strength on correct code: the sync.py:32 guard is unchanged from HEAD and the probe confirms the no-op"
+    },
+    {
+      "id": "tests-4",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test loads a wrapper file with the wrong version, so removing the version check still passes",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "mutant dropping the version check at sync.py:19: unittest OK"
+      ],
+      "failure_mechanism": "{\"version\":1,\"entries\":{...}} -> would be accepted if the check were removed",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: sync.py:19 rejects version != 2, and the probe confirms a v1 wrapper -> {}",
+      "rejection_reason": "test-strength on correct code: sync.py:19 rejects version != 2, and the probe confirms a v1 wrapper -> {}"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "The exists-then-remove sequence in clear_cache can raise FileNotFoundError under concurrent deletion",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "sync.py:32-33"
+      ],
+      "failure_mechanism": "concurrent removal between exists and remove -> FileNotFoundError",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "Pre-existing code that the diff did not change; the contract states no concurrency requirement"
+    },
+    {
+      "id": "lead-2",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "The clear_cache signature change breaks existing callers of clear_cache(path)",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "grep: no callers outside test_sync.py"
+      ],
+      "failure_mechanism": "an old one-argument call -> TypeError",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "R3 requires the signature change, and no callers exist in the repository"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "security",
+      "note": "exists-then-remove race at sync.py:32-33 is a robustness issue",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "user without is_admin raises AttributeError, not PermissionError",
+      "disposition": "adjudicated",
+      "finding_id": "security-1"
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "the signature change breaks outside callers of clear_cache(path)",
+      "disposition": "adjudicated",
+      "finding_id": "lead-2"
+    },
+    {
+      "reviewer": "tests",
+      "note": "user object with no is_admin raises AttributeError",
+      "disposition": "adjudicated",
+      "finding_id": "security-1"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "The invariants role (retry-counter boundary R2/I3, surface rated low) was left out at the panel maximum of 4 because security retention displaced it. Lead-run tests and reviewer probes cover the boundary, but no dedicated invariants review was done"
+    }
+  ],
+  "verified_state": {
+    "head": "4250c1e1717f6aadd6b49472e28158bacee86883",
+    "files": {
+      "sync.py": "38998efe69f984251cfa565f3147f7af40c2928c",
+      "test_sync.py": "7a791315c3dbe315f1de15f8d74afdaebbed4427"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Run verify in release mode so the invariants role reviews the retry boundary; this clears the only UNAVAILABLE gap"
+}

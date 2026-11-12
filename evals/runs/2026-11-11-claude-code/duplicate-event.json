@@ -1,0 +1,201 @@
+{
+  "case_id": "duplicate-event",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD da8013a (history.py, test_history.py)",
+  "scope": {
+    "covered": [
+      "history.py working-tree changes (HistoryStore.record implementation)",
+      "test_history.py working-tree changes"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "no branch commits beyond HEAD (single baseline commit)",
+      "ignored .verify-eval/ files (contract only, not reviewed as code)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/duplicate-event/repo/.verify-eval/task.md",
+    "source_hash": "fd44a00ac750ab7a15cebfd8a6c10bd9c15d9aee",
+    "requirements": [
+      "R1: record a new event once (a new event_id appends exactly one history entry)",
+      "R2: repeated delivery of the same event_id must not create another history entry"
+    ],
+    "risks": [
+      "HistoryStore.record (idempotency / duplicate delivery): medium \u2014 duplicate entries corrupt history consumers"
+    ],
+    "invariants": [
+      "I1: event_id is unique in history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: after record(\"evt-1\", 10) on a fresh store, history holds exactly one entry for evt-1",
+      "result": "PASS",
+      "evidence": "history.py:6; test_history.py:7-10; `python3 -m unittest -v test_history` -> Ran 1 test, OK"
+    },
+    {
+      "id": "A2",
+      "text": "R2: calling record twice with the same event_id leaves exactly one history entry for it",
+      "result": "FAIL",
+      "evidence": "history.py:5-6 appends unconditionally; probe `s.record('evt-1',10); s.record('evt-1',10)` -> [('evt-1', 10), ('evt-1', 10)]"
+    },
+    {
+      "id": "I1",
+      "text": "event_id is unique in history",
+      "result": "FAIL",
+      "evidence": "same probe: entries contains evt-1 twice"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: idempotency / duplicate delivery (R2, I1)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_history",
+      "result": "Ran 1 test in 0.000s, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -I -c \"from history import HistoryStore; s=HistoryStore(); s.record('evt-1',10); s.record('evt-1',10); print(s.entries)\"",
+      "result": "[('evt-1', 10), ('evt-1', 10)]",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read history.py:1-6 and test_history.py:1-14 against R1/R2/I1",
+      "result": "record appends unconditionally; only test covers single record",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "read test_history.py for duplicate-delivery coverage",
+      "result": "no test calls record twice with same event_id",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "read history.py:5-6 for uniqueness/idempotency guard",
+      "result": "no membership check or seen-set",
+      "execution": "static",
+      "run_by": "invariants"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression role",
+      "reason": "not triggered: record previously raised NotImplementedError; no consumers or persisted surface in repo"
+    },
+    {
+      "check": "security role",
+      "reason": "not triggered: no trust boundary, auth, or sensitive data surface"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "HistoryStore.record appends a second history entry when the same event_id is delivered again, violating R2/A2 and I1.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "history.py:5-6 body is only `self.entries.append((event_id, value))` with no uniqueness check",
+        "lead probe: record('evt-1',10) twice -> [('evt-1', 10), ('evt-1', 10)]"
+      ],
+      "failure_mechanism": "same event_id delivered twice -> append runs both times -> two entries for evt-1, A2 fails and I1 (unique event_id) broken",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "record appends duplicates for an already-recorded event_id, breaking R2 and I1.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "history.py:5-6",
+        "lead probe -> [('evt-1', 10), ('evt-1', 10)]"
+      ],
+      "failure_mechanism": "record('evt-1',10) twice -> two entries -> I1 violated",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1 (same root cause, history.py:6); merged",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause, history.py:6); merged"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers repeated delivery of the same event_id, so the suite passes while record appends duplicates; required evidence E2 is missing.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_history.py:7-10 single record call only",
+        "`python3 -m unittest -v test_history` -> Ran 1 test, OK"
+      ],
+      "failure_mechanism": "duplicate delivery untested -> suite green despite acceptance-1 defect",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "absent required test E2 is recorded as a MISSING evidence gap, not a finding; the code defect is merged into acceptance-1",
+      "rejection_reason": "absent required test E2 is recorded as a MISSING evidence gap, not a finding; the code defect is merged into acceptance-1"
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "Required evidence E2 (test that duplicate delivery yields one entry) is missing.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_history.py:6-10 only test_records_event"
+      ],
+      "failure_mechanism": "suite never records the same event_id twice -> passes despite acceptance-1",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of tests-1; recorded as MISSING evidence gap per adjudication rules",
+      "rejection_reason": "duplicate of tests-1; recorded as MISSING evidence gap per adjudication rules"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "history.py:6 does no dedupe, so R2/I1 fail in the implementation itself",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "concurrency/thread-safety and persistence not checked; not required by contract",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "E2: no test showing repeated delivery of the same event_id yields one history entry (R2/I1); test_history.py contains only a single-record test"
+    }
+  ],
+  "verified_state": {
+    "head": "da8013a87e7e8f7ba16fb34ab773617777ee9fff",
+    "files": {
+      "history.py": "d00227343c2045366d3eb63f9b9be1e1df473f6a",
+      "test_history.py": "ea933ef3bbd3f28cdec8712a6cf87861cf2b9454"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Make HistoryStore.record skip an event_id already in entries, and add a test that records the same event_id twice and asserts there is exactly one entry. Then re-check with acceptance, tests and invariants against head da8013a, history.py d0022734 and test_history.py ea933ef3. Do not commit, push or describe this change as verified until a re-check passes."
+}

@@ -1,0 +1,279 @@
+{
+  "case_id": "v0.5-recheck-unfixed-outside-delta",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "re-check delta since verified state 04f5c3370964735fe67de789cd2824465a22364c: working-tree limits.py (modified), test_limits_boundary.py (untracked, new), plus config.py (file of open prior finding F2)",
+  "scope": {
+    "covered": [
+      "limits.py (working tree, modified vs HEAD)",
+      "test_limits_boundary.py (untracked, new)",
+      "config.py (file of open prior finding F2; unchanged since recorded hash)",
+      "test_config.py and test_limits.py read as supporting evidence"
+    ],
+    "not_covered": [
+      "test_config.py and test_limits.py as delta paths (content matches recorded hashes)",
+      "pre-existing code outside the delta and the open-finding files",
+      "no commits since verified head; no staged content differing from the working tree"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract .verify-eval/task.md",
+    "source_hash": "dec9082e45e04097e0f3ce21f98d8e1c878b6d9d",
+    "requirements": [
+      "R1: is_valid_page_size(size) in limits.py returns True exactly when 1 <= size <= MAX_PAGE_SIZE, with MAX_PAGE_SIZE = 100 from config.py."
+    ],
+    "risks": [],
+    "invariants": [
+      "I1: the limit is inclusive: MAX_PAGE_SIZE itself is a valid page size."
+    ],
+    "preserved_behaviors": [
+      "P1: DEFAULT_PAGE_SIZE in config.py stays 25; existing clients rely on it."
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: is_valid_page_size(size) returns True exactly when 1 <= size <= MAX_PAGE_SIZE, with MAX_PAGE_SIZE = 100 from config.py, including size == 100.",
+      "result": "PASS",
+      "evidence": "limits.py:5 `return 1 <= size <= MAX_PAGE_SIZE`; config.py:2 MAX_PAGE_SIZE = 100; test_limits_boundary.py:8-9 (100 True, 101 False) passed in `python3 -m unittest -v`"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "re-check baseline role for panel mode",
+    "tests": "re-check baseline role for panel mode",
+    "invariants": "open prior SHOULD_FIX F1 (I1 inclusive boundary)",
+    "regression": "open prior SHOULD_FIX F2 (P1 DEFAULT_PAGE_SIZE)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git hash-object .verify-eval/task.md",
+      "result": "dec9082e45e04097e0f3ce21f98d8e1c878b6d9d, equal to prior source_hash: re-check eligible",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git status --porcelain; git hash-object on the recorded and delta paths",
+      "result": "no commits since 04f5c33; limits.py changed (774a338f...); test_limits_boundary.py new; config.py, test_config.py, test_limits.py match recorded hashes",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff cff329e HEAD",
+      "result": "config.py:1 changed DEFAULT_PAGE_SIZE 25 -> 50 and test_config.py:8 changed its assertion 25 -> 50 at the verified head",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "Ran 3 tests, OK (test_default_page_size, test_typical_sizes, test_limit_is_inclusive); left an untracked __pycache__/ only",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read limits.py, config.py, test_limits.py, test_limits_boundary.py, test_config.py",
+      "result": "limits.py:5 is inclusive; config.py:1 is still DEFAULT_PAGE_SIZE = 50; test_config.py:8 asserts 50",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "boundary trace of limits.py:5 at 0, 1, 100, 101",
+      "result": "False, True, True, False, matching R1/I1",
+      "execution": "static",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "contract-derived sabotage set against the tests",
+      "result": "upper-bound and lower-bound-removal mutations are caught; a 1 < size mutation survives; test_config.py:8 pins 50",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "P1 check and callers of is_valid_page_size",
+      "result": "config.py:1 = 50 breaks P1; the only callers are tests",
+      "execution": "static",
+      "run_by": "regression"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "F2",
+      "status": "VALIDATED",
+      "reviewer": "regression",
+      "claim": "DEFAULT_PAGE_SIZE changed from 25 to 50.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "config.py:1 sets DEFAULT_PAGE_SIZE = 50 (working tree, blob 6e114610 unchanged since prior verified state)",
+        "git diff cff329e HEAD: config.py:1 25 -> 50",
+        "test_config.py:8 assertEqual(config.DEFAULT_PAGE_SIZE, 50) pins the broken value, so the passing suite hides the regression (merged from tests-1)"
+      ],
+      "failure_mechanism": "existing clients use the default -> pages double in size -> P1 broken",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "SHOULD_FIX",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "F1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "is_valid_page_size rejects MAX_PAGE_SIZE itself.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "limits.py:5 now `1 <= size <= MAX_PAGE_SIZE`",
+        "test_limits_boundary.py:8 asserts is_valid_page_size(100) is True; passed"
+      ],
+      "failure_mechanism": "size == 100 -> returns True -> no failure",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "resolved in this re-check",
+      "rejection_reason": "Prior finding resolved: limits.py:5 is inclusive, confirmed by an executed boundary test."
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "DEFAULT_PAGE_SIZE is 50, not the 25 that P1 requires.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "config.py:1",
+        "test_config.py:8"
+      ],
+      "failure_mechanism": "client omits page size -> default 50 instead of 25 -> pages twice the expected size",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of F2",
+      "rejection_reason": "Duplicate of the root cause of unresolved prior finding F2 (gate step 6); merged into F2, which keeps its original severity SHOULD_FIX."
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "test_config.py asserts DEFAULT_PAGE_SIZE == 50, contradicting P1, so the suite hides the P1 violation.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "test_config.py:8",
+        "config.py:1"
+      ],
+      "failure_mechanism": "config.py holds 50 -> test passes -> suite green while P1 is broken; restoring 25 turns it red",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "merged into F2",
+      "rejection_reason": "A test asserting wrong behavior is evidence of the code defect it protects; merged into F2 (gate step 6), whose severity governs."
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts size 1 is valid, so a 1 < size mutation would pass every test.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_limits.py:8-9 tests only 10 and 0",
+        "test_limits_boundary.py:8-9 tests only 100 and 101",
+        "limits.py:5 is correct"
+      ],
+      "failure_mechanism": "lower bound made exclusive -> is_valid_page_size(1) False -> undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: the lead verified limits.py:5 accepts 1 by reading it."
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "is_valid_page_size does not handle non-int inputs (None, floats, bools).",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "limits.py:4 signature `size: int`"
+      ],
+      "failure_mechanism": "non-int input -> unspecified behavior -> no contract impact",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "The contract specifies an integer size; inputs it excludes are not a defect (gate step 3)."
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "P1 violated: config.py:1 DEFAULT_PAGE_SIZE = 50; test_config.py:8 asserts 50",
+      "disposition": "adjudicated",
+      "finding_id": "F2"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "non-int inputs to size: int not covered by the contract",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "non-int inputs such as None or floats are unchecked",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "could not read baseline cff329e to confirm when the value changed",
+      "disposition": "adjudicated",
+      "finding_id": "F2"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "04f5c3370964735fe67de789cd2824465a22364c",
+    "files": {
+      "config.py": "6e114610be7b21fb09842302e2cffa9cada577d1",
+      "limits.py": "774a338f0ab8c72c7f7ac88befaba23f830299d4",
+      "test_config.py": "19c43fd43f88e63eed7e1023be2ed12bf5253b32",
+      "test_limits.py": "1c862c83ec8496f7f5466ebf20a79cc1c4934007",
+      "test_limits_boundary.py": "c183f00093bee7051545c1bd1ec7b1e47697245e"
+    }
+  },
+  "recheck": {
+    "round": 1,
+    "prior_verdict": "FIX REQUIRED",
+    "prior_findings": [
+      {
+        "id": "F1",
+        "resolution": "resolved",
+        "evidence": [
+          "limits.py:5 `return 1 <= size <= MAX_PAGE_SIZE`",
+          "python3 -m unittest -v: test_limit_is_inclusive ok (test_limits_boundary.py:8 asserts 100 True)"
+        ]
+      },
+      {
+        "id": "F2",
+        "resolution": "unresolved",
+        "evidence": [
+          "config.py:1 still `DEFAULT_PAGE_SIZE = 50`; blob 6e114610 identical to prior verified state",
+          "test_config.py:8 still asserts 50"
+        ]
+      }
+    ],
+    "roles": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "delta": {
+      "commits": [],
+      "paths": [
+        "limits.py",
+        "test_limits_boundary.py"
+      ]
+    },
+    "another_round_required": true
+  },
+  "source_unchanged": true,
+  "minimum_next_action": "Fix F2: restore DEFAULT_PAGE_SIZE = 25 in config.py and correct test_config.py:8 to assert 25. Then run a re-check (acceptance, tests, regression) against verified state head 04f5c3370964735fe67de789cd2824465a22364c and the files hashes above. Do not commit, push, or describe the change as verified until a re-check passes."
+}

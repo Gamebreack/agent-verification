@@ -1,0 +1,107 @@
+{
+  "case_id": "v0.2-pure-formatter-no-overflow",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 97208a3 on main (format_id.py, test_format_id.py); there are no branch commits beyond the base (local main, because origin/HEAD does not exist)",
+  "scope": {
+    "covered": [
+      "format_id.py working-tree changes",
+      "test_format_id.py working-tree changes"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "behavior for inputs the contract excludes (negative or non-integer values)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.2-pure-formatter-no-overflow/repo/.verify-eval/task.md",
+    "source_hash": "cc1ba861f1ef6c7e9d4b0494060ae72189e3dfc2",
+    "requirements": [
+      "R1: format_id(value) returns 'id-' followed by a 4-digit zero-padded representation of value; inputs are non-negative integers"
+    ],
+    "risks": [
+      "format_id.py pure function: low, because it has no consumers, persisted state or boundary surface in the repo",
+      "test_format_id.py: low, test-only"
+    ],
+    "invariants": [
+      "I1: the output always starts with 'id-', followed by the decimal digits of value zero-padded to width 4"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "For non-negative integer inputs, format_id(value) returns 'id-' followed by value zero-padded to 4 digits (e.g. 7 -> 'id-0007', 0 -> 'id-0000')",
+      "result": "PASS",
+      "evidence": "format_id.py:2 returns f\"id-{value:04d}\"; test_format_id.py:8,11,14 assert id-0007/id-0042/id-0000; unittest run: 3 tests OK; the lead also observed 0,1,7,42,999,1000,9999 -> id-0000..id-9999"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest -v test_format_id",
+      "result": "Ran 3 tests, OK (test_formats_larger_value, test_formats_with_padding, test_formats_zero)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 call of format_id on 0,1,7,42,999,1000,9999",
+      "result": "['id-0000','id-0001','id-0007','id-0042','id-0999','id-1000','id-9999']",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "trace of A1 to format_id.py:2 and test_format_id.py:7-14",
+      "result": "A1 PASS, no findings",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "sabotage analysis (no prefix, 3/5-digit padding, space padding, constant return, wrong casing)",
+      "result": "each mutation is caught by at least one exact-string assertion in test_format_id.py:8,11,14; no findings",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "none is configured in the repo, and installing tooling is not allowed"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "Behavior for values > 9999 is not specified by the contract",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "tests",
+      "note": "Diff of the target files against HEAD 97208a3 is empty",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "97208a33eb6699918137746c78d2b2f43f1d8621",
+    "files": {
+      "format_id.py": "542e7ae725c2e054bb7d1ea3314c529dd2efa325",
+      "test_format_id.py": "e30b1cb56e294fe6944877ef1560edb47d61dce3"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required. Optionally, the task owner could state the expected output for values above 9999 if that range matters."
+}

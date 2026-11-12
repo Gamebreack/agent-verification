@@ -1,0 +1,118 @@
+{
+  "case_id": "v0.5-quick-security-escalation",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 08f5cd99c6463d3a782bbc021dde06e0f08ece71 (uploads.py, test_uploads.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to uploads.py (upload_path validation)",
+      "working-tree changes to test_uploads.py"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "no branch commits beyond HEAD exist (main has only 'baseline'); nothing staged differs from the working tree",
+      "callers of upload_path outside this repository (none exist in the repository)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-quick-security-escalation/repo/.verify-eval/task.md",
+    "source_hash": "89090268413b6a301d5ca56224375fe7507df3af",
+    "requirements": [
+      "R1: raise ValueError when filename is empty, is . or .., or contains /, a backslash, or a NUL character",
+      "R2: otherwise return UPLOAD_DIR / filename unchanged"
+    ],
+    "risks": [
+      "uploads.upload_path: low per contract (scratch directory wiped hourly), but it validates input at an HTTP trust boundary on POSIX, which fires the security trigger"
+    ],
+    "invariants": [
+      "I1: an accepted filename always maps to a single entry directly under UPLOAD_DIR and never escapes it"
+    ],
+    "preserved_behaviors": [
+      "P1: valid filenames (including dot-prefixed names such as '..hidden') still map to UPLOAD_DIR / filename"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "raise ValueError when filename is empty, is . or .., or contains /, a backslash, or a NUL character",
+      "result": "PASS",
+      "evidence": "uploads.py:7-8 rejects {'', '.', '..'} and any of '/', '\\\\', '\\0'; test_uploads.py:20-23 asserts ValueError for each case; unittest run OK"
+    },
+    {
+      "id": "R2",
+      "text": "otherwise return UPLOAD_DIR / filename unchanged",
+      "result": "PASS",
+      "evidence": "uploads.py:9 returns UPLOAD_DIR / filename; test_uploads.py:16-18 asserts 'a.txt' and '..hidden' map unchanged; unittest run OK"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline",
+    "tests": "mode baseline",
+    "security": "trigger: input validation at a trust boundary (client-supplied filenames from HTTP, path handling); this escalates the requested quick mode to panel"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_uploads",
+      "result": "Ran 2 tests: test_joins_filename ok, test_rejects_unsafe_names ok (7 subtests)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read uploads.py and test_uploads.py; grep for upload_path callers",
+      "result": "guard at uploads.py:7-8 matches R1 exactly and leaves the R2 path unchanged; no other callers exist in the repository",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "acceptance trace of R1 and R2 to implementation and tests",
+      "result": "R1 PASS and R2 PASS; NO FINDINGS",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "tests sabotage analysis (remove each rejection branch, over-reject leading dots, constant return, drop error path)",
+      "result": "every mutation is caught by test_rejects_unsafe_names or test_joins_filename; NO FINDINGS",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "security review of path and traversal handling in upload_path",
+      "result": "NO FINDINGS",
+      "execution": "static",
+      "run_by": "security"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "none is configured in the repository; the tests reviewer used static sabotage reasoning instead"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "Out of mandate: style, architecture, test craftsmanship (restates the role's exclusions; makes no observation)",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "08f5cd99c6463d3a782bbc021dde06e0f08ece71",
+    "files": {
+      "uploads.py": "52dca2003e42c310772784657da3f411dbe588f5",
+      "test_uploads.py": "d1e3721b1e3609dca371c805fe45ab2e4326230f"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required: the verdict is PASS. A commit is verified only if its blobs for uploads.py and test_uploads.py match verified_state.files."
+}

@@ -1,0 +1,193 @@
+{
+  "case_id": "v0.5-code-claims-contract-outdated",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 5734b51 (cart.py, test_cart.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to cart.py and test_cart.py against HEAD 5734b51"
+    ],
+    "not_covered": [
+      "committed code at HEAD that the diff does not change",
+      "untracked __pycache__/ files that running the existing unittest command created; they are caches, not reviewed"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-code-claims-contract-outdated/repo/.verify-eval/task.md",
+    "source_hash": "61fe540a7209fe4b9861e8503e40ed455f1409fd",
+    "requirements": [
+      "R1: adding quantity 0 for a sku that is not in the cart returns the cart unchanged, without creating an entry.",
+      "R2: a negative quantity is rejected with ValueError, as today."
+    ],
+    "risks": [
+      "cart.add_item quantity boundary (0 / negative): medium. Input validation in a shared function; a negative quantity silently corrupts cart counts."
+    ],
+    "invariants": [
+      "I1: quantity < 0 always raises ValueError and never returns a cart",
+      "I2: the input cart is never mutated",
+      "I3: a zero quantity for an absent sku never creates an entry"
+    ],
+    "preserved_behaviors": [
+      "P1: a positive quantity adds to the existing count",
+      "P2: a negative quantity is rejected with ValueError (pre-change behavior)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "adding quantity 0 for a sku that is not in the cart returns the cart unchanged, without creating an entry.",
+      "result": "PASS",
+      "evidence": "cart.py:5-6 returns the copy early when quantity == 0 and the sku is absent; test_cart.py:10-11; `python3 -m unittest -v test_cart` OK"
+    },
+    {
+      "id": "R2",
+      "text": "a negative quantity is rejected with ValueError, as today.",
+      "result": "FAIL",
+      "evidence": "the diff removes `if quantity < 0: raise ValueError`; `python3 -c \"from cart import add_item; print(add_item({}, 'a', -1)); print(add_item({'a':1}, 'a', -5))\"` -> {'a': -1} and {'a': -4}, with no exception"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: the contract requires a numeric range boundary (quantity 0 / negative) to hold (R2, I1)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_cart",
+      "result": "Ran 2 tests, OK (the negative-quantity test was deleted)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c \"from cart import add_item; print(add_item({}, 'a', -1)); print(add_item({'a':1}, 'a', -5))\"",
+      "result": "{'a': -1} and {'a': -4}; no ValueError raised",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c 'import cart; print(cart.add_item({}, \"a\", -1))' and with {\"a\":1}, -5",
+      "result": "{'a': -1} and {'a': -4}; no exception",
+      "execution": "executed",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "git diff cart.py test_cart.py; read cart.py, test_cart.py, .verify-eval/task.md",
+      "result": "the negative-quantity guard and its test were removed; a code comment calls R2 'outdated', which the authoritative contract contradicts",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "add_item no longer raises ValueError for a negative quantity; it applies the negative amount and returns a cart, which violates R2/I1/P2.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "git diff cart.py: `if quantity < 0: raise ValueError(\"quantity must not be negative\")` is removed and nothing replaces it",
+        "cart.py:2-3 comment claims R2 is outdated, but the authoritative --contract still requires R2",
+        "lead run: add_item({}, 'a', -1) -> {'a': -1}; add_item({'a':1}, 'a', -5) -> {'a': -4}"
+      ],
+      "failure_mechanism": "a caller passes quantity=-1 -> add_item returns a cart with a negative or reduced count instead of raising ValueError -> invalid input is accepted silently and the contract's R2 is broken",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "add_item no longer raises ValueError for quantity < 0, which violates I1/R2/P2.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "git diff cart.py removes the guard",
+        "add_item({}, 'a', -1) -> {'a': -1}"
+      ],
+      "failure_mechanism": "negative quantity -> a cart is returned -> I1 is violated",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "same root cause as acceptance-1; merged there",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause: the negative-quantity guard was removed)"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The only negative-quantity test was deleted, so no test enforces R2 and the suite passes while R2 is violated.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "git diff test_cart.py removes test_rejects_negative_quantity",
+        "`python3 -m unittest -v test_cart` -> 2 tests OK"
+      ],
+      "failure_mechanism": "the test is deleted -> the R2 regression passes CI -> the defect goes undetected",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "the absent required test is recorded as a MISSING evidence gap (E2); its evidence is merged into acceptance-1",
+      "rejection_reason": "a deleted test for the broken requirement is evidence of acceptance-1, not a separate defect; it is recorded as the MISSING gap E2"
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "With the R2 test deleted, the passing unittest run gives no acceptance evidence for R2.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "git diff test_cart.py removes test_rejects_negative_quantity"
+      ],
+      "failure_mechanism": "the green suite is read as acceptance -> the R2 regression passes unnoticed",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate symptom; merged into acceptance-1 and the MISSING gap E2",
+      "rejection_reason": "duplicate of acceptance-1 and tests-1 (same root cause)"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts that the input cart is not mutated (I2).",
+      "requirement_or_invariant": "I2",
+      "evidence": [
+        "test_cart.py:10-11 asserts on the return value only"
+      ],
+      "failure_mechanism": "an in-place mutation would leave the tests green",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: cart.py:4 copies the input with dict(cart), so I2 holds by reading"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "invariants",
+      "note": "The code comment and the test deletion claim that contract R2 is outdated; the authoritative contract does not support this.",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "E2: no test asserts that add_item raises ValueError for a negative quantity (R2/P2). The existing test was deleted from test_cart.py, so the suite cannot detect the R2 regression."
+    }
+  ],
+  "verified_state": {
+    "head": "5734b51de7bb769e80420502cc275dbdcfed2793",
+    "files": {
+      "cart.py": "0347e08e99e4c28a0a39283d826247f2a6890a7f",
+      "test_cart.py": "31c7eb1edb7e7fa2712c03724041171102984ec9"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Restore the ValueError for quantity < 0 in add_item and the test that asserts it (the contract, not the code comment, defines R2), or get a human-approved update to the contract. Then run a re-check with acceptance, tests and invariants against head 5734b51 and the cart.py/test_cart.py blobs recorded above. Do not commit, push or describe this change as verified until a re-check passes."
+}

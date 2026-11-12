@@ -1,0 +1,204 @@
+{
+  "case_id": "v0.5-plan-artifact",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "artifact: docs/plan.md (untracked, working tree) at HEAD 20c23752688d1df218e278d020a3e38fba504db8",
+  "scope": {
+    "covered": [
+      "docs/plan.md: its factual claims and proposed steps, checked against config.py and test_config.py at HEAD 20c2375"
+    ],
+    "not_covered": [
+      "Any implementation of the plan (none exists; the target is the plan only)",
+      "Pre-existing code in config.py and test_config.py, except where it was used to check the plan's claims"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-plan-artifact/repo/.verify-eval/task.md",
+    "source_hash": "a4c99aed6e3fc94674c4bf53c3e0ecb0ef5fe452",
+    "requirements": [
+      "R1: loading a config file that contains a key not in DEFAULTS raises ValueError naming that key, so typos in config files fail loudly",
+      "R2: files containing only known keys load as today, merged over DEFAULTS"
+    ],
+    "risks": [
+      "config.load validation behavior (proposed surface): medium, because callers that load configs see new error semantics on unknown keys",
+      "test_config.py (proposed): low, test-only",
+      "config.py module docstring (proposed): low, documentation only"
+    ],
+    "invariants": [
+      "I1: any key not in DEFAULTS makes config.load raise ValueError naming that key; no unknown key passes silently"
+    ],
+    "preserved_behaviors": [
+      "P1: a file with only known keys is merged over DEFAULTS, file values win, and a dict is returned (test_config.py:10-15)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "loading a config file that contains a key not in DEFAULTS raises ValueError naming that key, so typos in config files fail loudly",
+      "result": "FAIL",
+      "evidence": "docs/plan.md:7 claims load() already rejects unknown keys and docs/plan.md:14 says no loading-code change is needed, but config.py:9 returns {**DEFAULTS, **data} with no key check. Lead run: config.load on {\"timeot\": 5} returned {'timeout': 30, 'retries': 3, 'timeot': 5} with exit 0"
+    },
+    {
+      "id": "R2",
+      "text": "files containing only known keys load as today, merged over DEFAULTS",
+      "result": "PASS",
+      "evidence": "The plan proposes no change to the merge (docs/plan.md:14). Current merge: config.py:9. The existing test test_config.py:10-15 passed in a lead run of python3 -m unittest -v test_config"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline; no test exists for R1",
+    "regression": "trigger: the plan changes how config.load treats defaults and configuration, which callers of a shared loading interface can observe (new ValueError semantics)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_config",
+      "result": "test_merges_over_defaults ok; Ran 1 test; OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -c 'import sys, config; print(config.load(sys.argv[1]))' <tmpdir>/c.json, where c.json is {\"timeot\": 5}",
+      "result": "printed {'timeout': 30, 'retries': 3, 'timeot': 5}; exit 0; no ValueError",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read docs/plan.md, config.py and test_config.py",
+      "result": "The plan's premise (docs/plan.md:7) contradicts config.py:6-9. The plan's only test step (docs/plan.md:11) does not require the error to name the key",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "sabotage reasoning on the proposed test step against R1 and I1",
+      "result": "An implementation that raises a generic ValueError without naming the key passes a test that only expects ValueError",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "preserved-behavior and consumer review of config.load",
+      "result": "P1 is not broken by the plan; the plan leaves R1 unimplemented",
+      "execution": "static",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "git status --porcelain -uall --ignored and git hash-object docs/plan.md, before and after the run",
+      "result": "Unchanged: ?? docs/plan.md only; docs/plan.md blob c7054899237f905029e3ff60e2656214179589ef",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "tests of an implementation of R1",
+      "reason": "The target is a plan; no implementation exists to test"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "The plan's premise is false: it says config.load already rejects unknown keys and that no loading-code change is needed, so following it never implements R1",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:7",
+        "docs/plan.md:14",
+        "config.py:6-9 returns {**DEFAULTS, **data} with no unknown-key check",
+        "lead run: {\"timeot\": 5} -> {'timeout': 30, 'retries': 3, 'timeot': 5}, exit 0",
+        "merged duplicate tests-1: the plan's added test would fail against unchanged code (docs/plan.md:11 vs config.py:9)",
+        "merged duplicate regression-1: same root cause"
+      ],
+      "failure_mechanism": "a config file has a typo key such as timeot -> the plan adds no validation, so load merges it and returns it silently -> R1 and I1 stay unmet, and typos still do not fail loudly",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "The plan's test step only expects ValueError and never requires the error to name the offending key, so it does not trace to R1's 'naming that key'",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:11 'expects ValueError'",
+        "the plan says nothing anywhere about naming the key (docs/plan.md:1-14)",
+        "merged duplicate tests-2: sabotage that raises a generic ValueError survives the planned test"
+      ],
+      "failure_mechanism": "the plan is followed literally -> the test asserts any ValueError -> an implementation that does not name the key passes, and the naming part of R1 goes unverified and possibly unimplemented",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "SHOULD_FIX",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The plan's false premise means its test addition alone leaves R1 unenforced",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:7",
+        "docs/plan.md:11",
+        "docs/plan.md:14",
+        "config.py:9"
+      ],
+      "failure_mechanism": "test-only plan + no validation code -> R1 unmet",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of acceptance-1 (same false-premise root cause); evidence merged there",
+      "rejection_reason": "Duplicate of acceptance-1 (same false-premise root cause); evidence merged there"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The proposed test step does not require the ValueError message to name the unknown key",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:11"
+      ],
+      "failure_mechanism": "a generic ValueError sabotage survives the planned test",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of acceptance-2; merged",
+      "rejection_reason": "Duplicate of acceptance-2; merged"
+    },
+    {
+      "id": "regression-1",
+      "status": "NON_ISSUE",
+      "reviewer": "regression",
+      "claim": "The plan falsely asserts that unknown-key rejection exists and plans no code change, so rejection stays unimplemented",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "docs/plan.md:7",
+        "docs/plan.md:14",
+        "config.py:6-9"
+      ],
+      "failure_mechanism": "a typo key is merged silently -> R1 and I1 are violated",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of acceptance-1; merged",
+      "rejection_reason": "Duplicate of acceptance-1; merged"
+    }
+  ],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "20c23752688d1df218e278d020a3e38fba504db8",
+    "files": {
+      "docs/plan.md": "c7054899237f905029e3ff60e2656214179589ef"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Revise docs/plan.md in two ways. (1) Drop the false premise and add a step that changes config.load to raise ValueError naming any key not in DEFAULTS, while keeping the known-key merge. (2) Make the planned test assert that the message names the key, for example with assertRaisesRegex. Then re-check with acceptance, tests and regression against verified state HEAD 20c2375 and docs/plan.md blob c7054899237f905029e3ff60e2656214179589ef. Until that re-check passes, do not commit, push or describe the plan as verified."
+}

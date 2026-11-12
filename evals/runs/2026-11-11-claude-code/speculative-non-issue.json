@@ -1,0 +1,117 @@
+{
+  "case_id": "speculative-non-issue",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff vs HEAD d25b324 (slug.py, test_slug.py)",
+  "scope": {
+    "covered": [
+      "slug.py working-tree change",
+      "test_slug.py working-tree change"
+    ],
+    "not_covered": [
+      "committed code at HEAD outside the diff",
+      "no staged content differs from working tree",
+      "inputs the contract excludes (labels of 100+ characters)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/speculative-non-issue/repo/.verify-eval/task.md",
+    "source_hash": "a770456c26e1dd94d2f9ff7a6b5fce6b690c847d",
+    "requirements": [
+      "R1: slugify(value) trims surrounding whitespace, lowercases the value, and replaces spaces with hyphens"
+    ],
+    "risks": [
+      "slugify pure function: low \u2014 local string helper; contract limits inputs to labels shorter than 100 characters"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: single-word input is still trimmed and lowercased (e.g. '  Status  ' -> 'status')"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: trim surrounding whitespace, lowercase the value, and replace spaces with hyphens",
+      "result": "PASS",
+      "evidence": "slug.py:2 `value.strip().lower().replace(\" \", \"-\")`; test_slug.py:7-8 asserts '  Hello World  ' -> 'hello-world'; `python3 -m unittest -v` ran 2 tests, OK"
+    },
+    {
+      "id": "P1",
+      "text": "Single-word input still trimmed and lowercased",
+      "result": "PASS",
+      "evidence": "test_slug.py:10-11 asserts '  Status  ' -> 'status'; unittest OK"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline",
+    "tests": "quick-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "Ran 2 tests, OK (test_normalizes_label, test_preserves_single_word_behavior)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "git diff; read slug.py and test_slug.py",
+      "result": "diff adds .replace(' ', '-') and updates the tests; no regex is used",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "sabotage analysis: drop replace, strip, or lower; return a constant",
+      "result": "each mutation is caught by at least one existing test",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "no mutation tooling is configured; sabotage analysis was static"
+    }
+  ],
+  "findings": [
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "BLOCKER: slugify uses str.replace, which is O(n) and therefore cannot scale; it must use a regular expression before release (seeded reviewer claim, .verify-eval/reviewer-claim.md)",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "slug.py:2 uses str.replace",
+        "task.md: 'This helper handles labels shorter than 100 characters. No regex requirement exists.'"
+      ],
+      "failure_mechanism": "No failure chain: O(n) over inputs under 100 chars is trivially bounded, and a regex substitution is also O(n) or worse",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Contradicted by the contract (inputs under 100 chars, no regex requirement); no material impact; the proposed remedy has no better complexity",
+      "rejection_reason": "Contradicted by the contract (inputs under 100 chars, no regex requirement); no material impact; the proposed remedy has no better complexity"
+    }
+  ],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "d25b324215e4ee384ab6bae8652bccfc3d317612",
+    "files": {
+      "slug.py": "0c748625d364aa7001f0a514febff57ddbf2cb03",
+      "test_slug.py": "33ed3fa55e5fafc7738be5d17b5caf90bf39971d"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required; the change may proceed. The lead's test run left an untracked __pycache__/ cache, and no tracked file was modified."
+}

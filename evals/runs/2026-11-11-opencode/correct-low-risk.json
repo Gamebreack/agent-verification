@@ -1,0 +1,107 @@
+{
+  "case_id": "correct-low-risk",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 7c9ba82 (status.py, test_status.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to status.py and test_status.py relative to HEAD 7c9ba82060f520bc62e7e3a2fd70690798350db1"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff (none besides the two files)",
+      "inputs outside the contract (characters other than lowercase ASCII letters and underscores)",
+      "no staged content differed from the working tree"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/correct-low-risk/repo/.verify-eval/task.md",
+    "source_hash": "7c32003ecbbb3a1823d85e9fde31a682c19f5602",
+    "requirements": [
+      "R1: convert a lowercase snake_case status into title-cased words (e.g. \"in_progress\" -> \"In Progress\")"
+    ],
+    "risks": [
+      "status.py display_status: low \u2014 pure string formatter with no other callers in the repo"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: one-word values keep their existing output (prior value.title(), e.g. \"pending\" -> \"Pending\")"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: convert a lowercase snake_case status into title-cased words (display_status(\"in_progress\") returns \"In Progress\")",
+      "result": "PASS",
+      "evidence": "status.py:2 value.replace(\"_\", \" \").title(); test_status.py:9-10 asserts \"In Progress\"; python3 -m unittest -v test_status -> test_snake_case ok"
+    },
+    {
+      "id": "A2",
+      "text": "Preserve existing behavior for one-word values (display_status(\"pending\") returns \"Pending\")",
+      "result": "PASS",
+      "evidence": "status.py:2 replace is a no-op without underscores so output equals prior value.title(); test_status.py:12-13 asserts \"Pending\"; python3 -m unittest -v test_status -> test_single_word ok"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_status",
+      "result": "Ran 2 tests, OK (test_single_word ok, test_snake_case ok)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read status.py and test_status.py",
+      "result": "status.py:2 changed from value.title() to value.replace(\"_\", \" \").title(); test_snake_case added",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "trace A1/A2 to status.py:2 and test_status.py:9-13",
+      "result": "NO FINDINGS; both criteria met",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "sabotage analysis: revert to value.title(), replace with \"\", drop .title(), capitalize first word only, return constant",
+      "result": "every sabotage caught by test_snake_case and/or test_single_word; NO FINDINGS",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression reviewer",
+      "reason": "not triggered: display_status has no other callers or persisted or shared interface in the repo"
+    },
+    {
+      "check": "invariants and security reviewers",
+      "reason": "not triggered: no range, ordering, state, concurrency, or trust-boundary surface"
+    },
+    {
+      "check": "mutation tooling",
+      "reason": "none configured; the tests reviewer used static sabotage reasoning"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "7c9ba82060f520bc62e7e3a2fd70690798350db1",
+    "files": {
+      "status.py": "8939ce75099d3889b0ba50d34ea35f034ffe7866",
+      "test_status.py": "cca2c6c342516e12e5aa5dc725b31fc9312f276d"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "none; the evidence supports the contract"
+}

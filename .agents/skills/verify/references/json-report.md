@@ -92,7 +92,7 @@ Use this format only when the invocation requests JSON. Return one JSON object a
 - Preserve rejected seeded claims as `NON_ISSUE` findings with a `rejection_reason`, so adjudication can be evaluated.
 - `out_of_mandate[].finding_id` names the finding an adjudicated note became, or is `null`.
 - `recheck` is `null` unless the run is a re-check ([adjudication.md](adjudication.md#re-check)). `prior_findings` lists every open validated `BLOCKER` or `SHOULD_FIX` of the prior report. `another_round_required` is `true` while a new or unresolved validated `BLOCKER` or `SHOULD_FIX`, or a `MISSING` gap, remains.
-- `source_unchanged` is `true` only when the working tree is unchanged by the verification run.
+- `source_unchanged` is `true` only when the working tree is unchanged by the verification run. Untracked caches or coverage files produced by existing project commands do not make it `false`; only changes to tracked or pre-existing content do.
 
 ## Verified state
 

@@ -1,0 +1,153 @@
+{
+  "case_id": "v0.2-pure-formatter-no-overflow",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 7daac2a (format_id.py, test_format_id.py)",
+  "scope": {
+    "covered": [
+      "format_id.py working-tree change",
+      "test_format_id.py working-tree change"
+    ],
+    "not_covered": [
+      "committed baseline code outside the diff",
+      "behavior for values >= 10000, which the contract does not specify",
+      "untracked __pycache__/*.pyc written by the lead's unittest run (an existing-command cache, not reviewed)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.2-pure-formatter-no-overflow/repo/.verify-eval/task.md",
+    "source_hash": "cc1ba861f1ef6c7e9d4b0494060ae72189e3dfc2",
+    "requirements": [
+      "R1: format_id(value) returns 'id-' followed by a 4-digit zero-padded representation of value; inputs are non-negative integers"
+    ],
+    "risks": [
+      "format_id.py: low; a pure function with no other consumers in the repo",
+      "test_format_id.py: low; test-only"
+    ],
+    "invariants": [],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "return 'id-' followed by a 4-digit zero-padded representation of value. Inputs are non-negative integers.",
+      "result": "PASS",
+      "evidence": "format_id.py:2 `return f\"id-{value:04d}\"`; acceptance reviewer ran 0->id-0000, 7->id-0007, 42->id-0042, 999->id-0999, 1000->id-1000, 9999->id-9999; `python3 -m unittest -v test_format_id` -> 3 tests OK"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_format_id",
+      "result": "Ran 3 tests, OK (also wrote untracked __pycache__ cache files)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -B -c format_id over [0,1,7,42,999,1000,9999,10000]",
+      "result": "id-0000, id-0001, id-0007, id-0042, id-0999, id-1000, id-9999, id-10000",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "Mutation run in a temp copy outside the repo: 5 mutants (03d, 4d, no padding, constant, hardcoded '00'+02d) under python3 -m unittest -q test_format_id",
+      "result": "4 of 5 caught; f\"id-00{value:02d}\" survived",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "git diff; read format_id.py:1-2 and test_format_id.py:1-18",
+      "result": "implementation is a single f-string with 04d; tests check exact output for 7, 42 and 0",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "invariants, regression and security reviewers",
+      "reason": "no trigger fired: a pure function with no consumers, no persisted state and no trust boundary, and the contract states no range or boundary rule"
+    }
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test uses a 3- or 4-digit value, so an implementation that is only correct for values below 100 would still pass the suite.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_format_id.py:9,12,15 test only 7, 42 and 0",
+        "temp-copy mutant f\"id-00{value:02d}\" -> unittest OK"
+      ],
+      "failure_mechanism": "hypothetical mutant pads wrong for 100..9999 -> suite stays green -> the regression would go undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: the shipped format_id.py:2 uses 04d, which is correct across 0..9999 (executed: 999->id-0999, 1000->id-1000, 9999->id-9999), and E1 is met"
+    },
+    {
+      "id": "acceptance-oom-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "No test covers a value >= 1000 (no padding needed) or the 10000 boundary.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_format_id.py:9,12,15"
+      ],
+      "failure_mechanism": "missing test -> a future regression at >= 1000 could go undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code; duplicate root cause of tests-1",
+      "rejection_reason": "test-strength on correct code, merged with tests-1; behavior at 1000 and 9999 was confirmed by execution"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "format_id(10000) returns 'id-10000' (5 digits), which goes beyond the '4-digit' representation.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "acceptance run: 10000 -> 'id-10000'",
+        ".verify-eval/task.md states only a 4-digit zero-padded representation and does not specify truncation or rejection for values >= 10000"
+      ],
+      "failure_mechanism": "value >= 10000 -> 5+ digit output -> would matter only if the contract required a cap, truncation or an error",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "the contract requires no overflow handling; 'zero-padded to 4 digits' sets a minimum width, so the current behavior is a faithful reading and this is speculation beyond the contract"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "No test covers values >= 1000 or the 10000 boundary.",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-oom-1"
+    },
+    {
+      "reviewer": "tests",
+      "note": "The contract does not specify behavior for values >= 10000; the missing test there was not treated as a finding.",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "7daac2a4773a1f74d09027e06f1a2bd5d617494d",
+    "files": {
+      "format_id.py": "542e7ae725c2e054bb7d1ea3314c529dd2efa325",
+      "test_format_id.py": "e30b1cb56e294fe6944877ef1560edb47d61dce3"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required. Optionally add exact-output tests for a 3-digit and a 4-digit value (e.g. 123 -> 'id-0123', 1234 -> 'id-1234')."
+}

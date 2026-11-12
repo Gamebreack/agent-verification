@@ -1,0 +1,138 @@
+{
+  "case_id": "correct-low-risk",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD be1a497 (status.py, test_status.py) in <eval-dir>/claude-code/correct-low-risk/repo",
+  "scope": {
+    "covered": [
+      "status.py working-tree change to display_status",
+      "test_status.py working-tree change adding test_snake_case"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff (none other present)",
+      "no branch commits beyond base; staged content identical to HEAD (nothing staged)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/correct-low-risk/repo/.verify-eval/task.md",
+    "source_hash": "7c32003ecbbb3a1823d85e9fde31a682c19f5602",
+    "requirements": [
+      "R1: convert a lowercase snake_case status into title-cased words"
+    ],
+    "risks": [
+      "status.display_status (pure function, no other callers in repo): low \u2014 output-format change confined to one function"
+    ],
+    "invariants": [
+      "I1: inputs contain only lowercase ASCII letters and underscores (contract constraint)"
+    ],
+    "preserved_behaviors": [
+      "P1: one-word values produce the same output as before (value.title())"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: display_status converts a lowercase snake_case status into title-cased words (e.g. \"in_progress\" -> \"In Progress\")",
+      "result": "PASS",
+      "evidence": "status.py:2 value.replace(\"_\", \" \").title(); test_status.py:7-8 passes; lead probe: 'on_hold_review' -> 'On Hold Review'"
+    },
+    {
+      "id": "A2",
+      "text": "P1: preserve existing behavior for one-word values",
+      "result": "PASS",
+      "evidence": "no underscore -> replace is a no-op so output equals value.title() (HEAD behavior); test_status.py:10-11 'pending' -> 'Pending' passes; lead probe 'done' -> 'Done' equals 'done'.title()"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_status",
+      "result": "Ran 2 tests, OK (test_single_word, test_snake_case)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c probe of display_status on in_progress, pending, on_hold_review, a_b, done vs value.title()",
+      "result": "'In Progress','Pending','On Hold Review','A B','Done'; one-word outputs equal value.title()",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "grep -rn display_status --include=*.py",
+      "result": "only definition in status.py and uses in test_status.py; no other consumers",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_status plus spot check including 'waiting_for_review'",
+      "result": "2 tests OK; 'Waiting For Review'",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_status plus in-memory mutation script (revert to title(), capitalize(), drop title(), replace with '', replace first underscore only)",
+      "result": "2 tests OK; all mutants caught except replace(\"_\",\" \",1)",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "git diff; status.py; test_status.py",
+      "result": "one-line implementation change plus one added test",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression, invariants, security reviewers",
+      "reason": "no trigger: pure function with no external consumers, no boundary/ordering rule, no trust-boundary surface"
+    }
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers a status with two or more underscores, so a mutant replacing only the first underscore survives",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "test_status.py:7-8 uses only 'in_progress'",
+        "in-memory mutant replace(\"_\",\" \",1) passes both tests",
+        "status.py:2 replaces all underscores; 'on_hold_review' -> 'On Hold Review'"
+      ],
+      "failure_mechanism": "future regression to single-underscore replacement -> tests still pass -> multi-word statuses mis-rendered undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: lead verified multi-underscore behavior correct by execution"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "inputs with leading, trailing, or repeated underscores (e.g. 'a__b' -> 'A  B') have no output specified by the contract",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "be1a49763b2f21026811cfd0d96835f084a74ade",
+    "files": {
+      "status.py": "8939ce75099d3889b0ba50d34ea35f034ffe7866",
+      "test_status.py": "cca2c6c342516e12e5aa5dc725b31fc9312f276d"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required; optionally add a multi-underscore test case (e.g. 'on_hold_review' -> 'On Hold Review')."
+}

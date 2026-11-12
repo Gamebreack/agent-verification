@@ -724,7 +724,9 @@ def normalized_text(value: Any) -> str:
     return json.dumps(value, sort_keys=True).lower()
 
 
-def finding_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+def finding_matches(
+    actual: dict[str, Any], expected: dict[str, Any], criteria: list[Any] | None = None
+) -> bool:
     if actual.get("status") != expected.get("status", "VALIDATED"):
         return False
     # A re-emitted or carried-forward prior finding keeps its original id.
@@ -736,6 +738,10 @@ def finding_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
         for value in re.split(r"[,/|]", str(actual.get("requirement_or_invariant", "")))
         if value.strip()
     }
+    # A finding may link a criterion id (A1); it covers the ids its criterion text names.
+    for entry in criteria if isinstance(criteria, list) else []:
+        if isinstance(entry, dict) and str(entry.get("id", "")).strip() in actual_ids:
+            actual_ids.update(re.findall(r"[RIPE]\d+", str(entry.get("text", ""))))
     if allowed_ids and not allowed_ids.intersection(actual_ids):
         return False
     allowed_severities = expected.get("severities", [])
@@ -1110,7 +1116,7 @@ def score_report(case_id: str, report_path: Path, repo: Path) -> None:
 
     findings = report.get("findings", [])
     for expected_finding in expected.get("findings", []):
-        if not any(finding_matches(actual, expected_finding) for actual in findings):
+        if not any(finding_matches(actual, expected_finding, report.get("criteria")) for actual in findings):
             errors.append(f"missing semantic finding: {expected_finding.get('name', expected_finding)}")
 
     gap_kinds = {gap.get("kind") for gap in report.get("evidence_gaps", [])}
