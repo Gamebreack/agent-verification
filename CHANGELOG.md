@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-11
+
+Documentation polish; no change to skill behavior.
+
+### Fixed
+- **Reviewer-brief wording of 0.5.0:** the 0.5.0 note "reviewers get only the contract, the diff and their role" was abbreviated. Reviewers also get the finding schema, an output budget, the outputs of commands the lead ran and any open prior findings (SKILL.md, Reviewer brief). The released 0.5.0 entry is left as written.
+- **`flow-map.md` legend:** mandatory repository reads are now drawn solid; dotted is kept for optional or conditional edges (the contract file, command runs).
+- **`docs/architecture.md`:** each role is its own reviewer context, except in `quick`, where one context carries `acceptance` and `tests`.
+- **`docs/evaluation.md`:** names `evals/runs/2026-11-11-opencode-rerun/` as the per-case report of the `duplicate-event` re-run.
+
+### Changed
+- **README revamp:** badges, plain-language pitch, a Mermaid run overview, a sample report header, and role, verdict and mode tables; the discovery table lives in `docs/installation.md`.
+
 ## [0.5.0] - 2026-11-11
 
 Adds the review lifecycle to the verify skill (re-check loop, fixed report header, evidence labelling, branch-aware targets), tightens adjudication, and records behavioral runs on two hosts.
@@ -78,7 +91,8 @@ First tagged release: the verify skill as a portable Agent Skill, with a validat
 - **Eval harness** (`scripts/eval_harness.py`) with nine behavioral fixtures, unit tests and a GitHub Actions validation workflow.
 - **Docs:** README, architecture, installation and evaluation, plus the first recorded run.
 
-[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Gamebreack/agent-verification/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Gamebreack/agent-verification/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Gamebreack/agent-verification/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Gamebreack/agent-verification/compare/v0.2.0...v0.3.0

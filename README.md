@@ -1,92 +1,116 @@
-# Agent Verification Harness
+# verify — evidence-gated verification for agent-produced changes
 
-An evidence-gated software verification skill for agent-produced changes.
+[![Latest release](https://img.shields.io/github/v/release/Gamebreack/agent-verification)](https://github.com/Gamebreack/agent-verification/releases)
+[![License: MIT](https://img.shields.io/github/license/Gamebreack/agent-verification)](LICENSE)
+[![Validate](https://github.com/Gamebreack/agent-verification/actions/workflows/validate.yml/badge.svg)](https://github.com/Gamebreack/agent-verification/actions/workflows/validate.yml)
 
-It derives a Verification Contract from the original task, selects a small risk-appropriate panel of clean-context reviewers, and adjudicates their claims before returning a ship verdict. Passing tests and reviewer agreement are treated as evidence to inspect, not proof.
+`verify` is an Agent Skill that checks a change against what it was supposed to do. You give it the change and the task behind it. It builds a contract from that task, has fresh reviewers check the change against it, and returns a verdict backed by evidence. It never fixes anything. Passing tests and reviewer agreement are evidence to inspect, not proof.
 
-The package has a deterministic structural validation harness and behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, a correct low-risk change, and bounded multi-trigger panels (see [Evidence](#evidence)).
+## What you get
 
-## Core properties
+- **A contract from the original task**, built before any reviewer starts and never edited. Optionally supply your own with `--contract`.
+- **A small panel chosen by risk**: only the reviewers the changed surface calls for, each in a clean context.
+- **Evidence-gated adjudication**: every claim is checked and severity is earned, so speculation does not block a ship.
+- **A fixed report**: the same header every time, one of four verdicts, executed and static evidence labelled.
+- **Read-only, with a re-check loop**: you fix, then `verify` again and it confirms each earlier finding.
 
-- risk-based reviewer selection from a fixed five-role panel;
-- independent, depth-one specialist reviews;
-- acceptance checked against original intent, including an optional `--contract` file;
-- semantic test-adequacy analysis as part of the `tests` role;
-- evidence-gated severity and adjudication of every claim;
-- read-only verification with no autonomous fixing.
+## How it works
 
-## Invocation
+You invoke `verify` on a change. It resolves the target, builds the contract, selects and briefs reviewers, adjudicates their findings, and reports. After `FIX REQUIRED` you fix the change and re-run; the re-check looks at what changed and what was still open. Full flow: [flow-map.md](flow-map.md).
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"system-ui, -apple-system, Segoe UI, sans-serif","fontSize":"15px","primaryTextColor":"#1b221e","lineColor":"#8a968f","clusterBkg":"transparent","clusterBorder":"#b7c0ba","titleColor":"#5d6962","edgeLabelBackground":"#ffffff"},"flowchart":{"curve":"basis","nodeSpacing":22,"rankSpacing":30,"padding":14,"htmlLabels":true}}}%%
+flowchart LR
+    T["<b>Target</b><br/>the change"]
+    C["<b>Contract</b><br/>from the task"]
+    P["<b>Panel</b><br/>fresh reviewers"]
+    J["<b>Adjudication</b><br/>claims gated"]
+    V["<b>Verdict</b><br/>and report"]
+    Z["<b>Author fixes</b><br/>verify never repairs"]
+
+    T --> C --> P --> J --> V
+    V -->|"FIX REQUIRED"| Z
+    Z -->|"re-check"| P
+
+    classDef ext fill:#e7eae8,stroke:#8a968f,color:#1b221e
+    classDef p1 fill:#dbe8f6,stroke:#4a7fb5,color:#1b221e
+    classDef p2 fill:#fbefd2,stroke:#c3962c,color:#1b221e
+    classDef p3 fill:#d8eee2,stroke:#3f8f68,color:#1b221e
+    class T,C p1
+    class P p2
+    class J,V p3
+    class Z ext
+    linkStyle 4,5 stroke:#7a5aa6,stroke-width:1.5px
+```
+
+## What a report looks like
+
+Every report opens with this header (an illustrative example; the template lives in [adjudication.md](.agents/skills/verify/references/adjudication.md#markdown-report)):
+
+```markdown
+# Verification: FIX REQUIRED
+Target: branch feature/retry-payments against main, plus working tree
+Assurance: independent panel
+Evidence: executed unit tests, by the lead (pass); static handler and queue code, by reviewers; not run integration suite — no test database available
+Scope: covered 4 changed files; not covered staged content that differs from the working tree
+Verified state: 3f9c2a1 8d41e07b5c
+```
+
+## Reviewer roles
+
+Exactly five; the panel includes only those a concrete trigger calls for. Baselines, triggers and bounds: [panel.md](.agents/skills/verify/references/panel.md).
+
+| Role | Checks | Joins when |
+|---|---|---|
+| `acceptance` | the change does what the task asked | always |
+| `tests` | tests exist, are right, and would catch a failure | always |
+| `regression` | existing behavior and consumers still work | shared or persisted surface changed (always in `release`) |
+| `invariants` | ranges, ordering, state, retries, idempotency hold | the contract states such a rule |
+| `security` | authorization, secrets, trust boundaries | an auth or sensitive surface changed |
+
+## Verdicts
+
+Rules: [adjudication.md](.agents/skills/verify/references/adjudication.md#verdict-rules).
+
+| Verdict | Meaning |
+|---|---|
+| `PASS` | no validated finding blocks the change |
+| `PASS WITH NOTES` | shippable, with notes or evidence gaps to read |
+| `FIX REQUIRED` | a validated blocking defect or missed requirement; do not ship until a re-check passes |
+| `INCONCLUSIVE` | essential evidence is unavailable or the source of truth is ambiguous |
+
+## Modes
+
+| Mode | Baseline | Maximum |
+|---|---|---|
+| `quick` | acceptance and tests in one reviewer context | no extra roles; escalates to `panel` on a security trigger or high-risk surface |
+| `panel` (default) | acceptance and tests, plus triggered roles | bounded; escalates to `release` on a critical surface |
+| `release` | acceptance, tests and regression, plus triggered roles | all five roles |
+
+## Quick start
+
+Install: [docs/installation.md](docs/installation.md) lists every host's discovery path. For one user, symlink the skill, for example `ln -s "$PWD/.agents/skills/verify" ~/.agents/skills/verify`, and restart the host.
 
 ```text
 verify [quick|panel|release] [target] [--contract <path>] [--report markdown|json]
 ```
 
-- Mode: default `panel`.
-- Target: default is branch-aware: the branch against its merge base plus the working tree when the branch has commits not on its base; otherwise the working-tree diff (or the branch against its merge base when the tree is clean). Also accepts a commit, range, branch, explicit file set, a plan or design document (an artifact target), or a pull request (only when named). Base resolution is read-only; see [verification-contract.md](.agents/skills/verify/references/verification-contract.md#base-resolution).
-- `--contract <path>`: a markdown or text file holding the task statement, acceptance criteria, and non-goals. When supplied, it is the authoritative source of truth.
-- Report: default `markdown`; `json` returns the machine-readable report only.
-
-The canonical skill lives at [`.agents/skills/verify`](.agents/skills/verify).
-
-## Reviewer roles
-
-`acceptance`, `tests`, `regression`, `invariants`, `security`. See [Architecture](docs/architecture.md).
-
-## Verdicts
-
-- `PASS`
-- `PASS WITH NOTES`
-- `FIX REQUIRED`
-- `INCONCLUSIVE`
-
-`INCONCLUSIVE` is used when essential evidence cannot be collected or the source of truth is materially ambiguous. It prevents an unavailable check from being silently treated as a pass.
-
-## Non-goals
-
-- custom agent runtime;
-- custom mutation engine or test framework;
-- recursive delegation;
-- autonomous fixes;
-- replacement for static analyzers or CI;
-- a generic list-everything code review.
-
-## Validate
-
-```bash
-python3 scripts/eval_harness.py validate
-python3 -m unittest discover -s tests -v
-python3 scripts/eval_harness.py prepare <case_id> <destination>
-python3 scripts/eval_harness.py check <case_id> <report.json> <destination>
+```text
+verify                               # the current branch and working tree, panel mode
+verify quick                         # a small, low-risk change
+verify release v1.2.0..HEAD --contract docs/task.md
 ```
 
-See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases against a model host.
+Target and base resolution rules: [SKILL.md](.agents/skills/verify/SKILL.md).
 
 ## Evidence
 
-- **Structural validation** (`scripts/eval_harness.py validate`) is deterministic: it checks the skill package's required files, validates every fixture manifest, materializes each as a real Git repository, and confirms the candidate's own tests pass without mutating the fixture source. It does not require a model.
-- **Behavioral evaluation** requires a model host, because the artifact under test is an Agent Skill that must be invoked by an agent. Results are recorded per run; see the latest run and its analysis in [Behavioral evaluation](docs/evaluation.md#assurance-boundary) and the retained records under [`evals/runs/`](evals/runs/).
-
-## Discovery
-
-The skill is a portable Agent Skill package with no host-specific runtime. Hosts discover it from one of these locations:
-
-| Host | Discovery path | Notes |
-|---|---|---|
-| Canonical | `.agents/skills/verify` | Source of truth; every other location is a copy or symlink of this. |
-| Claude Code | `.claude/skills/verify` | Symlinked to the canonical path in this repository. |
-| OpenCode | `.agents/skills` + `.opencode/commands/verify.md` | The command file is a thin invocation adapter; it does not duplicate verification policy. |
-| Antigravity | `.agents/skills` | Auto-registers as a slash command in interactive use. |
-| Codex, Cursor | `.agents/skills` | Read directly from the canonical Agent Skills location. |
-
-See [Installation](docs/installation.md) for user-wide symlink locations.
+- **Structural validation** is deterministic and needs no model: `python3 scripts/eval_harness.py validate` and `python3 -m unittest discover -s tests` check the skill package, materialize every fixture as a real Git repository and test the scorer. They prove the package is well-formed, not that a model behaves well.
+- **Behavioral runs** need a model host, because the skill is run by an agent. Latest records: [OpenCode](evals/runs/2026-11-11-opencode.json) and [Claude Code](evals/runs/2026-11-11-claude-code.json). What they do and do not show: [assurance boundary](docs/evaluation.md#assurance-boundary).
 
 ## Documentation
 
-- [Architecture](docs/architecture.md)
-- [Flow map](flow-map.md): the runtime flow as diagrams
-- [Installation](docs/installation.md)
-- [Behavioral evaluation](docs/evaluation.md)
-- Latest evaluation run (2026-11-11): [OpenCode](evals/runs/2026-11-11-opencode.json), [Claude Code](evals/runs/2026-11-11-claude-code.json); see [assurance boundary](docs/evaluation.md#assurance-boundary)
+[Architecture](docs/architecture.md) · [Flow map](flow-map.md) · [Installation](docs/installation.md) · [Behavioral evaluation](docs/evaluation.md) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
 
 ## License
 

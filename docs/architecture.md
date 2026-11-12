@@ -14,7 +14,7 @@ Security retention: a triggered security role is never the one omitted at the bo
 
 ## Reviewer roles
 
-Exactly five: `acceptance`, `tests`, `regression`, `invariants`, `security`. Each role runs as one reviewer; a role is never split across reviewers.
+Exactly five: `acceptance`, `tests`, `regression`, `invariants`, `security`. Each role is its own reviewer context and is never split across reviewers, except in `quick`, where one context carries `acceptance` and `tests` (see [panel.md](../.agents/skills/verify/references/panel.md#modes)).
 
 ## The `--contract` file
 
