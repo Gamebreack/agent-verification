@@ -86,7 +86,7 @@ See [Installation](docs/installation.md) for user-wide symlink locations.
 - [Flow map](flow-map.md): the runtime flow as diagrams
 - [Installation](docs/installation.md)
 - [Behavioral evaluation](docs/evaluation.md)
-- [Latest evaluation run](evals/runs/2026-09-28-claude-code.json)
+- Latest evaluation run (2026-11-11): [OpenCode](evals/runs/2026-11-11-opencode.json), [Claude Code](evals/runs/2026-11-11-claude-code.json); see [assurance boundary](docs/evaluation.md#assurance-boundary)
 
 ## License
 
