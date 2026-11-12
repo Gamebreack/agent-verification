@@ -5,7 +5,7 @@ The runtime flow of the `verify` skill, from the invocation (A) to the report an
 Renders on GitHub and claude.ai; VS Code needs a Mermaid extension.
 
 > **Status:** checked against the skill files; verified by a pre-release verify panel (release mode) and re-check. The skill is a set of instructions run by the host's agent, so every step shown is specified in the skill files; the flow is not code.
-> Lines: solid = main path · dotted = optional path · light grey dashed box = side path
+> Lines: solid = main path · dotted = optional or conditional path · light grey dashed box = side path
 
 ## 1. What happens
 
@@ -99,7 +99,7 @@ flowchart TD
 
 ## 2. Who talks to whom
 
-The caller invokes the lead, which reads the repository and the contract file and briefs host subagents; reviewers read the repository and may run existing project commands. Colors here only tell who is who.
+The caller invokes the lead, which reads the repository and the contract file and briefs host subagents; reviewers read the repository and may run existing project commands. Solid lines are always taken; dotted ones are optional (the contract file) or conditional (command runs). Colors here only tell who is who.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"system-ui, -apple-system, Segoe UI, sans-serif","fontSize":"15px","primaryTextColor":"#1b221e","lineColor":"#8a968f","edgeLabelBackground":"#ffffff"},"flowchart":{"curve":"basis","nodeSpacing":36,"rankSpacing":44,"padding":14,"htmlLabels":true}}}%%
@@ -113,13 +113,11 @@ flowchart TD
 
     USER -->|"invokes"| LEAD
     LEAD -->|"report"| USER
-    %% 2: optional
-    LEAD -.->|"reads"| REPO
+    LEAD -->|"reads"| REPO
     %% 3: optional
     LEAD -.->|"reads"| CON
     LEAD <-->|"briefs, findings"| REV
-    %% 5: optional
-    REV -.->|"reads"| REPO
+    REV -->|"reads"| REPO
     %% 6: optional
     LEAD -.->|"runs if reviewers can't"| CMD
     %% 7: optional
@@ -133,7 +131,7 @@ flowchart TD
     class USER front
     class LEAD ours
     class REPO,CON db
-    linkStyle 2,3,5,6,7 stroke:#8a968f,stroke-width:1.5px,stroke-dasharray:2 3
+    linkStyle 3,6,7 stroke:#8a968f,stroke-width:1.5px,stroke-dasharray:2 3
 ```
 
 ## 3. The life of one verification
