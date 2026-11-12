@@ -4,11 +4,7 @@ An evidence-gated software verification skill for agent-produced changes.
 
 It derives a Verification Contract from the original task, selects a small risk-appropriate panel of clean-context reviewers, and adjudicates their claims before returning a ship verdict. Passing tests and reviewer agreement are treated as evidence to inspect, not proof.
 
-## Status
-
-**v0.4.0.**
-
-The package has a deterministic structural validation harness and 12 behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, a correct low-risk change, and bounded multi-trigger panels. Structural validation passes; behavioral evaluation of this version has been run once, on Claude Code (see [Evidence](#evidence)).
+The package has a deterministic structural validation harness and behavioral fixtures covering acceptance omissions, bogus tests, boundary errors, idempotency, contract regressions, tenant authorization, speculative findings, unavailable evidence, a correct low-risk change, and bounded multi-trigger panels (see [Evidence](#evidence)).
 
 ## Core properties
 
@@ -67,8 +63,8 @@ See [Behavioral evaluation](docs/evaluation.md) to materialize and score cases a
 
 ## Evidence
 
-- **Structural validation** (`scripts/eval_harness.py validate`) is deterministic: it checks the skill package's required files, validates all 12 fixture manifests, materializes each as a real Git repository, and confirms the candidate's own tests pass without mutating the fixture source. It does not require a model.
-- **Behavioral evaluation** requires a model host, because the artifact under test is an Agent Skill that must be invoked by an agent. The latest retained behavioral run is **v0.4.0 (Claude Code, 2026-09-28): 10/12 matched, 0 false negatives, 2 over-strict verdicts** — see [`evals/runs/2026-09-28-claude-code.json`](evals/runs/2026-09-28-claude-code.json) (per-case reports alongside it). The prior run, [`evals/runs/2026-09-04-chatgpt-work.json`](evals/runs/2026-09-04-chatgpt-work.json) (skill v0.1.0, 9 cases, host ChatGPT Work), is kept as history. A 5-case rerun after the adjudication-policy fix matched 5/5 ([`evals/runs/2026-09-28-claude-code-rerun.json`](evals/runs/2026-09-28-claude-code-rerun.json)). Cross-host: OpenCode 11/12, Antigravity 10/12, zero false negatives on either ([records](evals/runs/)).
+- **Structural validation** (`scripts/eval_harness.py validate`) is deterministic: it checks the skill package's required files, validates every fixture manifest, materializes each as a real Git repository, and confirms the candidate's own tests pass without mutating the fixture source. It does not require a model.
+- **Behavioral evaluation** requires a model host, because the artifact under test is an Agent Skill that must be invoked by an agent. Results are recorded per run; see the latest run and its analysis in [Behavioral evaluation](docs/evaluation.md#assurance-boundary) and the retained records under [`evals/runs/`](evals/runs/).
 
 ## Discovery
 
