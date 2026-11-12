@@ -4,12 +4,12 @@
 [![License: MIT](https://img.shields.io/github/license/Gamebreack/agent-verification)](LICENSE)
 [![Validate](https://github.com/Gamebreack/agent-verification/actions/workflows/validate.yml/badge.svg)](https://github.com/Gamebreack/agent-verification/actions/workflows/validate.yml)
 
-`verify` is an Agent Skill that checks a change against what it was supposed to do. You give it the change and the task behind it. It builds a contract from that task, has fresh reviewers check the change against it, and returns a verdict backed by evidence. It never fixes anything. Passing tests and reviewer agreement are evidence to inspect, not proof.
+`verify` is an Agent Skill that checks a change against what it was supposed to do. You give it the change and the task behind it. It builds a contract from that task, has fresh reviewers check the change against it, and returns a verdict backed by evidence. It never fixes anything. Passing tests and reviewer claims are evidence to inspect, not proof; reviewer agreement is never evidence.
 
 ## What you get
 
 - **A contract from the original task**, built before any reviewer starts and never edited. Optionally supply your own with `--contract`.
-- **A small panel chosen by risk**: only the reviewers the changed surface calls for, each in a clean context.
+- **A small panel chosen by risk**: the mode's baseline reviewers plus only those the changed surface calls for, each in a fresh context (in `quick`, one context carries both baseline roles).
 - **Evidence-gated adjudication**: every claim is checked and severity is earned, so speculation does not block a ship.
 - **A fixed report**: the same header every time, one of four verdicts, executed and static evidence labelled.
 - **Read-only, with a re-check loop**: you fix, then `verify` again and it confirms each earlier finding.
@@ -58,7 +58,7 @@ Verified state: 3f9c2a1 8d41e07b5c
 
 ## Reviewer roles
 
-Exactly five; the panel includes only those a concrete trigger calls for. Baselines, triggers and bounds: [panel.md](.agents/skills/verify/references/panel.md).
+Exactly five; the panel is the mode's baseline plus only those a concrete trigger calls for. Baselines, triggers and bounds: [panel.md](.agents/skills/verify/references/panel.md).
 
 | Role | Checks | Joins when |
 |---|---|---|
@@ -107,6 +107,10 @@ Target and base resolution rules: [SKILL.md](.agents/skills/verify/SKILL.md).
 
 - **Structural validation** is deterministic and needs no model: `python3 scripts/eval_harness.py validate` and `python3 -m unittest discover -s tests` check the skill package, materialize every fixture as a real Git repository and test the scorer. They prove the package is well-formed, not that a model behaves well.
 - **Behavioral runs** need a model host, because the skill is run by an agent. Latest records: [OpenCode](evals/runs/2026-11-11-opencode.json) and [Claude Code](evals/runs/2026-11-11-claude-code.json). What they do and do not show: [assurance boundary](docs/evaluation.md#assurance-boundary).
+
+## What it is not
+
+Not an agent runtime, a mutation engine or test framework, a replacement for static analyzers or CI, or a list-everything code review. It never fixes code and never delegates beyond one level.
 
 ## Documentation
 

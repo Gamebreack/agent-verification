@@ -9,13 +9,13 @@ All notable changes to this project are documented here. The format follows [Kee
 Documentation polish; no change to skill behavior.
 
 ### Fixed
-- **Reviewer-brief wording of 0.5.0:** the 0.5.0 note "reviewers get only the contract, the diff and their role" was abbreviated. Reviewers also get the finding schema, an output budget, the outputs of commands the lead ran and any open prior findings (SKILL.md, Reviewer brief). The released 0.5.0 entry is left as written.
+- **Reviewer-brief wording of 0.5.0:** the 0.5.0 note "reviewers get only the contract, the diff and their role" was abbreviated. Reviewers also get the finding schema, an output budget, the outputs of commands the lead ran and any open prior findings (SKILL.md, workflow step 4). The released 0.5.0 entry is left as written.
 - **`flow-map.md` legend:** mandatory repository reads are now drawn solid; dotted is kept for optional or conditional edges (the contract file, command runs).
 - **`docs/architecture.md`:** each role is its own reviewer context, except in `quick`, where one context carries `acceptance` and `tests`.
 - **`docs/evaluation.md`:** names `evals/runs/2026-11-11-opencode-rerun/` as the per-case report of the `duplicate-event` re-run.
 
 ### Changed
-- **README revamp:** badges, plain-language pitch, a Mermaid run overview, a sample report header, and role, verdict and mode tables; the discovery table lives in `docs/installation.md`.
+- **README revamp:** badges, plain-language pitch, a Mermaid run overview, a sample report header, and role, verdict and mode tables; the discovery table lives in `docs/installation.md`; the old Non-goals list is now a short "What it is not" section.
 
 ## [0.5.0] - 2026-11-11
 
