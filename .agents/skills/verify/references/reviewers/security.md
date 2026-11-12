@@ -1,5 +1,7 @@
 # Security Reviewer
 
+The lead adjudicates, reports with the verify header, and a FIX REQUIRED needs a re-check before shipping.
+
 ## Question
 
 Does the changed attack surface introduce a concrete security, privacy, or authorization failure?

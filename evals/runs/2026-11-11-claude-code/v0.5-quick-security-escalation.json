@@ -1,0 +1,161 @@
+{
+  "case_id": "v0.5-quick-security-escalation",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD c98a2c8 (uploads.py, test_uploads.py)",
+  "scope": {
+    "covered": [
+      "uploads.py working-tree changes",
+      "test_uploads.py working-tree changes"
+    ],
+    "not_covered": [
+      "callers of upload_path (none present in repository)",
+      "how files are opened or written by callers, e.g. symlink handling inside UPLOAD_DIR",
+      "branch commits (no commits beyond base; working tree only)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-quick-security-escalation/repo/.verify-eval/task.md",
+    "source_hash": "89090268413b6a301d5ca56224375fe7507df3af",
+    "requirements": [
+      "R1: raise ValueError when filename is empty, is . or .., or contains /, a backslash, or a NUL character",
+      "R2: otherwise return UPLOAD_DIR / filename unchanged"
+    ],
+    "risks": [
+      "upload_path (uploads.py): medium. The contract states low risk because uploads go to a scratch directory wiped hourly, but client-supplied filenames from HTTP are input validation at a trust boundary (path traversal), which fires the security trigger and escalated quick to panel"
+    ],
+    "invariants": [
+      "I1: no accepted filename yields a path outside UPLOAD_DIR or naming UPLOAD_DIR itself (POSIX)"
+    ],
+    "preserved_behaviors": [
+      "P1: ordinary names (e.g. 'a.txt') still return UPLOAD_DIR / name"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "raise ValueError when filename is empty, is . or .., or contains /, a backslash, or a NUL character",
+      "result": "PASS",
+      "evidence": "uploads.py:7-8; test_uploads.py:11-14 (subTests for '', '.', '..', '../etc/passwd', 'a/b', 'a\\\\b', 'a\\0b'); python3 -B -m unittest -v test_uploads -> 2 tests OK; tests reviewer: 6 single-class removal mutations all caught"
+    },
+    {
+      "id": "R2",
+      "text": "otherwise return UPLOAD_DIR / filename unchanged",
+      "result": "PASS",
+      "evidence": "uploads.py:9; test_uploads.py:8-9 assert 'a.txt' and '..hidden' come back unchanged; acceptance probe: '...', ' ', '.x' accepted with parent == UPLOAD_DIR and name unchanged"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "mode baseline",
+    "tests": "mode baseline",
+    "security": "security trigger: input validation of HTTP-client-supplied filenames at a trust boundary (path handling). This escalated the requested quick mode to panel"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_uploads",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_uploads (re-run)",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe of upload_path over rejected and accepted names",
+      "result": "'', '.', '..', '/', 'a/b', 'a\\\\b', '\\x00', 'x\\x00' raise ValueError; '...', '..hidden', '.x', ' ' accepted, parent == UPLOAD_DIR and name unchanged",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "10 sabotage mutations of uploads.py in a temporary copy, each followed by python3 -B -m unittest test_uploads",
+      "result": "all 10 mutations caught (dropping each of '', '.', '..', '/', backslash, NUL; disabling the whole check; returning a constant; over-rejecting names that start with a dot; raising TypeError instead of ValueError)",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe of traversal and edge-case names (Unicode slash lookalike, lone surrogate, ' ..', '.. ', '~root', '$HOME')",
+      "result": "every accepted name has parent == UPLOAD_DIR and != UPLOAD_DIR; every traversal or separator name raises ValueError",
+      "execution": "executed",
+      "run_by": "security"
+    },
+    {
+      "command_or_inspection": "git status --short --untracked-files=all; git hash-object uploads.py test_uploads.py",
+      "result": "only the two target files modified; blob ids unchanged from the start of the run",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression review of callers of upload_path",
+      "reason": "no callers or consumers exist in the repository; regression trigger did not fire"
+    }
+  ],
+  "findings": [
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "upload_path does not check that filename is a str",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "uploads.py:6 annotates filename: str",
+        "acceptance Out of mandate note"
+      ],
+      "failure_mechanism": "non-str input -> no explicit type check -> no contract impact",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "outside the contract, which states that filenames are strings",
+      "rejection_reason": "outside the contract, which states that filenames are strings"
+    },
+    {
+      "id": "lead-2",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "a symlink already inside UPLOAD_DIR could redirect an accepted name when a caller opens it",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "security Out of mandate note",
+        "uploads.py:9 only builds a path"
+      ],
+      "failure_mechanism": "symlink already in UPLOAD_DIR -> caller follows it on open -> write lands outside the directory",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "the symlink would have to exist beforehand and the caller would have to open the file; neither is part of upload_path or this diff",
+      "rejection_reason": "the symlink would have to exist beforehand and the caller would have to open the file; neither is part of upload_path or this diff"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "the type of a non-str filename is not checked",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "security",
+      "note": "a symlink already inside UPLOAD_DIR could redirect an accepted name when a caller opens it",
+      "disposition": "adjudicated",
+      "finding_id": "lead-2"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "c98a2c837c1734bbcc7bfda37c13c2005ab90ea2",
+    "files": {
+      "uploads.py": "52dca2003e42c310772784657da3f411dbe588f5",
+      "test_uploads.py": "d1e3721b1e3609dca371c805fe45ab2e4326230f"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "none required; the change may be committed with the blob ids recorded in verified_state"
+}

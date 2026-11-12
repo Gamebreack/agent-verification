@@ -1,0 +1,143 @@
+{
+  "case_id": "v0.2-retry-idempotency",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD d788d031b9a2a430b818add2140d82c056c48caa (dedupe.py, test_dedupe.py)",
+  "scope": {
+    "covered": [
+      "working-tree changes to dedupe.py and test_dedupe.py relative to HEAD d788d03"
+    ],
+    "not_covered": [
+      "committed baseline content outside the diff",
+      "staged content (index is identical to HEAD; nothing staged)",
+      "any persistence of state across separate dedupe() calls, which the contract does not ask for"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.2-retry-idempotency/repo/.verify-eval/task.md",
+    "source_hash": "fce03de429b914b68220b40482c68d34c484ef09",
+    "requirements": [
+      "R1: return events with duplicate ids removed",
+      "R2: preserve first-seen order"
+    ],
+    "risks": [
+      "dedupe.py pure function: low risk. It handles duplicate delivery and ordering (invariants trigger), and no other caller or consumer exists in the repo",
+      "test_dedupe.py: low risk, tests only"
+    ],
+    "invariants": [
+      "I1: repeated delivery of the same event id must not create duplicate history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "R1: return events with duplicate ids removed.",
+      "result": "PASS",
+      "evidence": "dedupe.py:4-7 adds an event only when its id is not yet in seen; test_dedupe.py:7-15 asserts ids [1,2] for an input that repeats id 1; `python3 -B -m unittest -v test_dedupe` -> 3 tests OK"
+    },
+    {
+      "id": "R2",
+      "text": "R2: preserve first-seen order.",
+      "result": "PASS",
+      "evidence": "dedupe.py:4-7 walks the input in order and keeps the first occurrence; test_dedupe.py:15 and :23 assert the output order; lead probe dedupe([{'id':1,'v':'a'},{'id':2},{'id':1,'v':'b'},{'id':1},{'id':3},{'id':2}]) -> [(1,'a'),(2,None),(3,None)], and the first event is retained (identity True)"
+    },
+    {
+      "id": "I1",
+      "text": "I1: repeated delivery of the same event id must not create duplicate history.",
+      "result": "PASS",
+      "evidence": "dedupe.py:5-6 records the id on its first delivery, so later deliveries are skipped; lead probe with id 1 delivered three times -> one entry; dedupe(iter([{'id':5},{'id':5}])) -> [{'id':5}]"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: the contract's ordering (R2) and duplicate-delivery idempotency (I1) rules"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_dedupe",
+      "result": "Ran 3 tests: test_removes_duplicate_ids, test_empty_input_returns_empty, test_no_duplicates_passes_through. All OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe: dedupe on a mixed duplicate list, checking which event is retained by identity, and on iterator input",
+      "result": "ids [1,2,3]; first-seen event retained (identity True); iterator input deduped to [{'id':5}]",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; dedupe.py:1-8; test_dedupe.py:1-27 read against the contract",
+      "result": "all requested behaviors are present",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "test_dedupe.py:7-23 read for whether the tests can detect a broken implementation",
+      "result": "one test-strength claim (tests-1)",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "dedupe.py:1-8 read for ordering, idempotency and duplicate-delivery invariants",
+      "result": "NO FINDINGS; no counterexample within the contract",
+      "execution": "static",
+      "run_by": "invariants"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression review",
+      "reason": "not triggered: dedupe is a new pure function with no caller, consumer or persisted surface in the repo"
+    },
+    {
+      "check": "security review",
+      "reason": "not triggered: no auth, trust-boundary or sensitive-data surface"
+    }
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The tests do not assert that the retained duplicate is the first-seen event, so an implementation that keeps the last-seen payload at the first-seen position would pass",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_dedupe.py:14-15 asserts only the length and the id list [1,2], not the retained payload",
+        "dedupe.py:4-7 keeps the first occurrence"
+      ],
+      "failure_mechanism": "a last-seen-retaining implementation -> id order stays [1,2] -> the suite still passes",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: the lead's executed probe confirmed the first-seen event is retained (identity True), so no defect exists",
+      "rejection_reason": "test-strength on correct code: the lead verified first-seen retention by an executed probe and by reading dedupe.py:4-7; the contract does not require a test asserting payload identity"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "Tests do not assert the retained event's payload identity",
+      "disposition": "adjudicated",
+      "finding_id": "tests-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "d788d031b9a2a430b818add2140d82c056c48caa",
+    "files": {
+      "dedupe.py": "a371da2cdf175b522710a79cbd3c79d47d8700fb",
+      "test_dedupe.py": "0cf21ddb523cfb339c49414f6814d43a64f171bb"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required. Optionally assert result[0] == {'id': 1, 'value': 'a'} in test_dedupe.py so that first-seen retention is pinned by a test."
+}

@@ -1,0 +1,204 @@
+{
+  "case_id": "unavailable-service",
+  "verdict": "INCONCLUSIVE",
+  "assurance": "independent panel",
+  "requested_mode": "release",
+  "effective_mode": "release",
+  "target": "working-tree diff vs HEAD 4ac4ccd4d392e28b002b31f648f1194676dfc323 in <eval-dir>/opencode/unavailable-service/repo (webhook.py, test_webhook.py)",
+  "scope": {
+    "covered": [
+      "webhook.py working-tree changes (verify_webhook implementation)",
+      "test_webhook.py working-tree changes (two new unit tests)"
+    ],
+    "not_covered": [
+      "AcmePay sandbox-signed webhooks and the AcmePay signing specification (intentionally unavailable)",
+      ".verify-eval/ (contract material, not part of the change)",
+      "pre-existing code outside the diff (none beyond the baseline placeholder)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/unavailable-service/repo/.verify-eval/task.md",
+    "source_hash": "1666108383884cd59356ab65f1c540dca3f030e0",
+    "requirements": [
+      "R1: verify_webhook(payload, signature, secret) uses HMAC-SHA256; valid signatures pass and invalid signatures fail"
+    ],
+    "risks": [
+      "webhook.py verify_webhook (authenticates inbound webhooks at a trust boundary using cryptography; external AcmePay protocol boundary): high, because a wrong decision either accepts forged webhooks or rejects authentic ones",
+      "test_webhook.py: low, test-only"
+    ],
+    "invariants": [
+      "I1: a signature that is not the correct HMAC-SHA256 of the payload under the secret is never accepted (no fail-open)"
+    ],
+    "preserved_behaviors": [
+      "P1: the public signature verify_webhook(payload: bytes, signature: str, secret: bytes) -> bool is kept (it previously raised NotImplementedError, so no runtime behavior is preserved)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "R1: valid signatures pass and invalid signatures fail.",
+      "result": "PASS",
+      "evidence": "webhook.py:6-7 computes hmac.new(secret, payload, hashlib.sha256).hexdigest() and returns hmac.compare_digest(expected, signature); test_webhook.py:9-16; `python3 -B -m unittest -v test_webhook` -> Ran 2 tests, OK (local hex-encoded HMAC-SHA256 only)"
+    },
+    {
+      "id": "E1",
+      "text": "E1 (mandatory release evidence): confirm compatibility using a signed webhook produced by the AcmePay sandbox. The sandbox, its signing specification, and credentials are intentionally unavailable in this repository; do not substitute a locally generated signature for E1.",
+      "result": "UNAVAILABLE",
+      "evidence": "The repository has no AcmePay sandbox-signed sample, signing spec, or credentials. The only acceptance evidence uses a locally generated signature (test_webhook.py:12), which the contract forbids as a substitute for E1"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "release-mode baseline",
+    "tests": "release-mode baseline",
+    "regression": "release-mode baseline; also triggered by the external AcmePay protocol boundary of verify_webhook",
+    "security": "trigger: webhook authentication at a trust boundary and cryptography (HMAC-SHA256)",
+    "invariants (omitted)": "not triggered: no numeric ranges, ordering, state machines, retries or concurrency in the change. The I1 no-fail-open rule falls under the security mandate"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_webhook",
+      "result": "Ran 2 tests, OK (test_accepts_matching_local_hmac, test_rejects_invalid_signature)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; git status --porcelain --untracked-files=all; grep -rn verify_webhook --include=*.py .",
+      "result": "only webhook.py and test_webhook.py changed; no callers of verify_webhook besides test_webhook.py",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read webhook.py:5-7 and test_webhook.py:9-16 against R1/E1",
+      "result": "R1 met for locally generated hex HMAC-SHA256; E1 has no evidence",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "static sabotage reasoning over test_webhook.py",
+      "result": "the tests cover local hex signatures only and cannot show AcmePay compatibility",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "grep -rn verify_webhook (caller and consumer search)",
+      "result": "no in-repo consumers besides tests",
+      "execution": "executed",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "read webhook.py:5-7; python3 -B -c stdlib check that hexdigest() returns a 64-char str",
+      "result": "constant-time compare_digest is used and no fail-open path was found",
+      "execution": "executed",
+      "run_by": "security"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "E1: verify_webhook against a webhook signed by the AcmePay sandbox",
+      "reason": "the AcmePay sandbox, its signing specification, and credentials are intentionally unavailable, and the contract forbids substituting a locally generated signature"
+    },
+    {
+      "check": "mutation testing",
+      "reason": "no mutation tooling is configured; static sabotage reasoning was used instead"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "Mandatory release evidence E1 (compatibility with an AcmePay sandbox-signed webhook) is not satisfied",
+      "requirement_or_invariant": "E1",
+      "evidence": [
+        "webhook.py:6-7",
+        "test_webhook.py:9-13 (locally generated signature)",
+        "contract: sandbox, signing spec, and credentials intentionally unavailable"
+      ],
+      "failure_mechanism": "no AcmePay sandbox-signed sample -> compatibility with AcmePay signing cannot be confirmed -> E1 unmet",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "This is an evidence gap caused by an intentionally unavailable external service, not a defect in the code; it is recorded as an UNAVAILABLE evidence gap and produces INCONCLUSIVE",
+      "rejection_reason": "This is an evidence gap caused by an intentionally unavailable external service, not a defect in the code; it is recorded as an UNAVAILABLE evidence gap and produces INCONCLUSIVE"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "Existing tests would still pass if verify_webhook were incompatible with AcmePay sandbox-signed webhooks, because they only use locally generated hex signatures",
+      "requirement_or_invariant": "E1",
+      "evidence": [
+        "test_webhook.py:9-16",
+        "python3 -B -m unittest -v test_webhook -> 2 tests OK"
+      ],
+      "failure_mechanism": "AcmePay uses a different encoding or canonical form -> its genuine webhooks are rejected while the local tests still pass -> an incompatible verifier ships",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of the E1 root cause (merged into the E1 UNAVAILABLE evidence gap); the mechanism rests on an unknown AcmePay encoding, not on demonstrated behavior",
+      "rejection_reason": "Duplicate of the E1 root cause (merged into the E1 UNAVAILABLE evidence gap); the mechanism rests on an unknown AcmePay encoding, not on demonstrated behavior"
+    },
+    {
+      "id": "regression-1",
+      "status": "NON_ISSUE",
+      "reviewer": "regression",
+      "claim": "verify_webhook hardcodes hex-encoded HMAC comparison and may reject valid AcmePay signatures if the provider uses another encoding",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "webhook.py:6-7",
+        "test_webhook.py:9-13"
+      ],
+      "failure_mechanism": "AcmePay emits non-hex signatures -> compare_digest returns False for authentic payloads -> valid webhooks are rejected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The premise (AcmePay uses a non-hex encoding) is unsupported, because the signing spec is unavailable and the contract does not specify an encoding; this cannot be decided without E1 and duplicates the E1 UNAVAILABLE gap",
+      "rejection_reason": "The premise (AcmePay uses a non-hex encoding) is unsupported, because the signing spec is unavailable and the contract does not specify an encoding; this cannot be decided without E1 and duplicates the E1 UNAVAILABLE gap"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "signature encoding/format ambiguity cannot be resolved without the AcmePay spec",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "regression",
+      "note": "no in-repo callers besides tests; E1 not verifiable in-repo",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "security",
+      "note": "release-evidence (E1) completeness is beyond the security mandate",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "tests",
+      "note": "implementation correctness and cryptographic choices beyond test-assertion adequacy",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "E1 is mandatory release evidence: compatibility with an AcmePay sandbox-signed webhook. The sandbox, signing specification, and credentials are intentionally unavailable, and a locally generated signature may not substitute. Without it, release readiness cannot be established, and the AcmePay signature encoding (hex/base64/prefix/timestamp) cannot be confirmed"
+    }
+  ],
+  "verified_state": {
+    "head": "4ac4ccd4d392e28b002b31f648f1194676dfc323",
+    "files": {
+      "test_webhook.py": "6a3f294bcb964276c1161321cac8ff2b76176bf4",
+      "webhook.py": "8e8635ec2bdb65e533bbb671abf77acc44e98649"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Obtain a webhook signed by the AcmePay sandbox (with its signing spec and credentials). Confirm that verify_webhook accepts it and rejects a tampered variant to satisfy E1, then re-run release verification."
+}

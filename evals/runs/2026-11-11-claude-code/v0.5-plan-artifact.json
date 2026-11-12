@@ -1,0 +1,217 @@
+{
+  "case_id": "v0.5-plan-artifact",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "artifact: docs/plan.md (untracked) at HEAD 67afa3cda3e4d3e58889353e94ba772b330ff0d1",
+  "scope": {
+    "covered": [
+      "docs/plan.md: its factual claims and proposed steps, checked against config.py and test_config.py at HEAD 67afa3c"
+    ],
+    "not_covered": [
+      "Any implementation of the plan (none exists; the target is the plan only)",
+      "Consumers of config.load outside this repository"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-plan-artifact/repo/.verify-eval/task.md",
+    "source_hash": "a4c99aed6e3fc94674c4bf53c3e0ecb0ef5fe452",
+    "requirements": [
+      "R1: loading a config file that contains a key not in DEFAULTS raises ValueError naming that key, so typos in config files fail loudly",
+      "R2: files containing only known keys load as today, merged over DEFAULTS"
+    ],
+    "risks": [
+      "config.load() in config.py (config-file loading, defaults merge, consumed by callers): medium. A behavior change is observable to every caller and to existing config files"
+    ],
+    "invariants": [
+      "I1: the ValueError raised for an unknown key names the offending key (from R1)"
+    ],
+    "preserved_behaviors": [
+      "P1: known-key files merge over DEFAULTS, and file values override defaults (test_config.py:10-15)",
+      "P2: load() returns a plain dict containing all DEFAULTS keys"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "Loading a config file that contains a key not in DEFAULTS raises ValueError naming that key, so typos in config files fail loudly.",
+      "result": "FAIL",
+      "evidence": "docs/plan.md:7 and :14 claim load() already rejects unknown keys and that no loader change is needed. config.py:6-9 has no key check (`return {**DEFAULTS, **data}`). Lead command: `echo '{\"tmeout\": 5}' | python3 -B -I -c \"...config.load('/dev/stdin')\"` printed {'timeout': 30, 'retries': 3, 'tmeout': 5}, exit 0, and raised no ValueError."
+    },
+    {
+      "id": "R2",
+      "text": "Files containing only known keys load as today, merged over DEFAULTS.",
+      "result": "PASS",
+      "evidence": "The plan changes no loading code (docs/plan.md:14), so config.py:9 merge behavior is preserved. `python3 -B -m unittest test_config -v` ran 1 test, OK. R2 is preserved only because nothing changes; the plan does not cover keeping R2 once validation is added."
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "regression": "trigger: the plan targets config-file loading and defaults/configuration behavior observable by callers and by existing config files (config.load)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "echo '{\"tmeout\": 5}' | python3 -B -I -c \"import sys; sys.path.insert(0, '.'); import config; print(config.load('/dev/stdin'))\"",
+      "result": "Printed {'timeout': 30, 'retries': 3, 'tmeout': 5}, exit 0. The unknown key was accepted and no ValueError was raised",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest test_config -v",
+      "result": "Ran 1 test (test_merges_over_defaults), OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "Read docs/plan.md, config.py, test_config.py against the contract",
+      "result": "The plan's current-state claim (plan.md:7) contradicts config.py:6-9. The plan has no loader change step and no key-name assertion",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "Read docs/plan.md step 1 against required test evidence",
+      "result": "The planned test asserts only the ValueError type (plan.md:11)",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "Read config.py, test_config.py, docs/plan.md for preserved behavior",
+      "result": "P1/P2 are untouched because the plan makes no loader change",
+      "execution": "static",
+      "run_by": "regression"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "Run the plan's proposed unknown-key test",
+      "reason": "The test does not exist (the target is a plan), and creating it would violate the read-only constraint. The lead command above shows the outcome statically: it would fail"
+    },
+    {
+      "check": "Search for consumers of config.load beyond this repository",
+      "reason": "Out of scope. Reads were restricted to the materialized repository, where test_config.py is the only consumer"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "The plan's central premise that config.load() already rejects unknown keys is false, so the plan omits the loader change R1 requires.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:7 claims load() raises ValueError for unknown keys",
+        "docs/plan.md:14 says no change to the loading code is needed",
+        "config.py:6-9 has no membership check against DEFAULTS: `return {**DEFAULTS, **data}`",
+        "Lead command: input {\"tmeout\": 5} returned {'timeout': 30, 'retries': 3, 'tmeout': 5}, exit 0"
+      ],
+      "failure_mechanism": "The plan is executed as written -> step 1's unknown-key test fails because load() silently merges the typo key, or step 2 documents a rejection guarantee that does not exist -> typo keys still load silently, and R1 is not delivered",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "The plan specifies neither that the ValueError must name the offending key nor a test asserting it, so the key-naming part of R1 is not planned or evidenced.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:11: the test only 'expects ValueError'",
+        "docs/plan.md:5-14 has no message requirement",
+        "task.md:1: R1 requires a ValueError 'naming that key'"
+      ],
+      "failure_mechanism": "The plan is implemented (even with a loader fix) -> load() raises a generic ValueError without the key, and assertRaises(ValueError) still passes -> users do not learn which key is the typo, and R1 is only partly delivered with no failing test",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "SHOULD_FIX",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The planned test only expects ValueError and does not assert the message names the key, so a generic-ValueError mutant survives.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "docs/plan.md:11"
+      ],
+      "failure_mechanism": "load() raises ValueError('bad config') -> assertRaises passes -> the missing key name goes undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Merged into acceptance-2 (same root cause)",
+      "rejection_reason": "Duplicate of acceptance-2: same root cause (plan omits key-naming requirement and assertion); evidence merged"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The plan's premise that load() already rejects unknown keys is false, so its planned test would fail against current code.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "config.py:9",
+        "Lead command output {'timeout': 30, 'retries': 3, 'tmeout': 5}",
+        "docs/plan.md:7, :14"
+      ],
+      "failure_mechanism": "The plan is executed -> the new test fails or is weakened -> R1 is never delivered",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Merged into acceptance-1 (same root cause)",
+      "rejection_reason": "Duplicate of acceptance-1: same false-premise root cause; evidence merged"
+    },
+    {
+      "id": "regression-1",
+      "status": "NON_ISSUE",
+      "reviewer": "regression",
+      "claim": "The plan's premise that config.load() already rejects unknown keys is false, so following it leaves R1 unmet and adds a failing test.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "config.py:6-9",
+        "docs/plan.md:7, :14",
+        "Lead command output with no ValueError"
+      ],
+      "failure_mechanism": "The plan is executed -> the test fails or the docstring documents nonexistent behavior -> typo keys still load silently",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Merged into acceptance-1 (same root cause)",
+      "rejection_reason": "Duplicate of acceptance-1: same false-premise root cause; evidence merged"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "regression",
+      "note": "The plan has no acceptance criterion for the ValueError message naming the offending key, which R1 requires",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-2"
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "test_config.py has no unknown-key test, which is consistent with plan step 1 being needed",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "tests",
+      "note": "The planned docstring-only documentation step does not deliver R1 on its own",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "67afa3cda3e4d3e58889353e94ba772b330ff0d1",
+    "files": {
+      "docs/plan.md": "c7054899237f905029e3ff60e2656214179589ef"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Revise docs/plan.md in three ways: (1) correct the current-state claim, since config.load() does not reject unknown keys (config.py:9); (2) add a step that changes load() to raise ValueError naming each key not in DEFAULTS while keeping the merge over DEFAULTS for known-key files; (3) require a test that asserts the key name appears in the error, plus the existing merge test. Then re-check with acceptance, tests and regression against verified_state head 67afa3cd and docs/plan.md blob c7054899. The plan must not be treated as accepted or described as verified until a re-check passes."
+}

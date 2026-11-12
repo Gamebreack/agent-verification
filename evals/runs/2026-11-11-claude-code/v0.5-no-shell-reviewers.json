@@ -1,0 +1,112 @@
+{
+  "case_id": "v0.5-no-shell-reviewers",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 3c99c0ad89171d62e9fb58855753791ed90dd351 (temperature.py, test_temperature.py)",
+  "scope": {
+    "covered": [
+      "temperature.py working-tree changes",
+      "test_temperature.py working-tree changes"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "the .verify-eval/ directory beyond task.md (eval metadata, not part of the change)",
+      "no branch commits beyond HEAD exist on main; none were excluded",
+      "staged content: none (the index matches HEAD)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-no-shell-reviewers/repo/.verify-eval/task.md",
+    "source_hash": "87bd07f27ab56c36559e969c4e2c14502c3fceee",
+    "requirements": [
+      "R1: temperature.py exposes fahrenheit_to_celsius(fahrenheit), which returns (fahrenheit - 32) * 5 / 9 as a float"
+    ],
+    "risks": [
+      "temperature.py: low, adds a pure arithmetic function with no consumers beyond the tests",
+      "test_temperature.py: low, test-only change"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: celsius_to_fahrenheit is unchanged"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "Add fahrenheit_to_celsius(fahrenheit) to temperature.py. R1: return (fahrenheit - 32) * 5 / 9 as a float.",
+      "result": "PASS",
+      "evidence": "temperature.py:5-6 returns (fahrenheit - 32) * 5 / 9, and true division always yields a float; test_temperature.py:10-12 asserts 212->100 and 0->-17.77778; python3 -m unittest passed (lead)"
+    },
+    {
+      "id": "P1",
+      "text": "P1: celsius_to_fahrenheit is unchanged.",
+      "result": "PASS",
+      "evidence": "git diff shows temperature.py:1-2 only as unchanged context lines; the original test at test_temperature.py:7-8 is intact and passes"
+    },
+    {
+      "id": "E1",
+      "text": "E1 (required evidence): run the project's unittest suite (python3 -m unittest) in this run and observe it pass.",
+      "result": "PASS",
+      "evidence": "lead ran `python3 -m unittest -v`: Ran 2 tests, OK, exit 0"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v",
+      "result": "test_celsius_to_fahrenheit ok; test_fahrenheit_to_celsius ok; Ran 2 tests; OK; exit 0",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff (working tree vs HEAD)",
+      "result": "temperature.py adds only lines 3-6, with celsius_to_fahrenheit untouched; test_temperature.py adds the import and test_fahrenheit_to_celsius",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read temperature.py, test_temperature.py, task.md against R1/P1/E1",
+      "result": "all criteria satisfied; nothing omitted, substituted, or added beyond the request",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "contract-derived sabotage set (sign flip, inverted ratio, operator order, constant return, floor division, int/round truncation) against test_temperature.py:11-12",
+      "result": "every material mutation is caught by test_temperature.py:11 or :12",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "reviewer-run commands",
+      "reason": "reviewers in this run cannot execute commands; the lead ran the required unittest suite instead"
+    },
+    {
+      "check": "mutation tooling",
+      "reason": "none configured in the repository; tests reviewer used static sabotage reasoning"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "3c99c0ad89171d62e9fb58855753791ed90dd351",
+    "files": {
+      "temperature.py": "a9907ac579f5e963ee44b3067c4698755ece2704",
+      "test_temperature.py": "32aede36555b014668c0169127d032395d83a3a4"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required for the verdict. The verified state is head 3c99c0a plus the listed blobs; a commit should match those blob ids. The unittest run left untracked __pycache__/ files, which should not be committed."
+}

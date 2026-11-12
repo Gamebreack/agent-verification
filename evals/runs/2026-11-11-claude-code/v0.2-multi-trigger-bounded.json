@@ -1,0 +1,320 @@
+{
+  "case_id": "v0.2-multi-trigger-bounded",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "release",
+  "effective_mode": "release",
+  "target": "working-tree diff vs HEAD d0eb8cc (branch main; base resolved to local main == HEAD, no branch-only commits): quota.py, test_quota.py",
+  "scope": {
+    "covered": [
+      "quota.py working-tree content (allocate implementation)",
+      "test_quota.py working-tree content (4 unit tests)"
+    ],
+    "not_covered": [
+      ".verify-eval/ (read only task.md as the contract)",
+      "committed baseline content outside the diff (no other tracked files exist)",
+      "No staged content differs from the working tree; the index was not reviewed separately"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.2-multi-trigger-bounded/repo/.verify-eval/task.md",
+    "source_hash": "7446dd32effc6861d31dd0a5303b8c0e081a2b06",
+    "requirements": [
+      "R1: deny when tenant_id is empty with reason 'unauthorized'",
+      "R2: grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise",
+      "R3: response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters"
+    ],
+    "risks": [
+      "quota.allocate authorization gate: high, because tenant gating is an authorization/trust check",
+      "quota.allocate quota boundary math: high, because an inclusive/exclusive off-by-one grants or denies quota wrongly",
+      "quota.allocate response shape: medium, because it is a structured response consumed by callers",
+      "test_quota.py: medium, because it is the evidence for the above"
+    ],
+    "invariants": [
+      "I1: a missing tenant must never reach the quota math",
+      "I2 (derived from R2): current+requested == max_allowed grants; current+requested == max_allowed+1 denies"
+    ],
+    "preserved_behaviors": [
+      "P1: allocate(tenant_id, requested, current, max_allowed) stays importable from quota with the same name and positional order"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "deny when tenant_id is empty with reason 'unauthorized'",
+      "result": "PASS",
+      "evidence": "quota.py:2-3; test_denies_missing_tenant OK; lead probe allocate('',100,0,10) and allocate(None,1,0,10) -> granted 0, reason 'unauthorized'"
+    },
+    {
+      "id": "R2",
+      "text": "grant requested when current + requested <= max_allowed with reason 'ok'; deny with reason 'over_quota' otherwise",
+      "result": "PASS",
+      "evidence": "quota.py:4-10 uses `>` for deny; lead probe allocate('t1',5,5,10) -> granted 5/'ok'/remaining 0 and allocate('t1',6,5,10) -> granted 0/'over_quota'; test_grants_within_quota and test_denies_over_quota OK"
+    },
+    {
+      "id": "R3",
+      "text": "response shape is always {granted:int, reason:str, remaining:int}; never expose internal counters",
+      "result": "PASS",
+      "evidence": "quota.py:3,5,6-10: every return path has exactly the keys granted, reason, remaining, built from caller-supplied ints; test_response_shape_is_stable OK (ok path); lead probes show the same key set on all three paths"
+    },
+    {
+      "id": "I1",
+      "text": "a missing tenant must never reach the quota math",
+      "result": "PASS",
+      "evidence": "quota.py:2-3 returns before the arithmetic at quota.py:4; lead probe allocate('',100,0,10) -> 'unauthorized' (no over_quota evaluation)"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "release baseline",
+    "tests": "release baseline",
+    "regression": "release baseline; the structured response consumed by callers also triggers it",
+    "invariants": "trigger: quota math with an inclusive boundary (current+requested <= max_allowed) and an ordering rule (tenant gate before math, I1)",
+    "security": "trigger: authorization gate on tenant_id (R1/I1) at a trust boundary"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_quota",
+      "result": "Ran 4 tests, OK; left an untracked __pycache__/ (existing project command cache)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe of allocate with ('t1',5,5,10),('t1',6,5,10),('t1',0,10,10),(None,1,0,10),('',100,0,10),('t1',1,12,10),('t1',-3,5,10)",
+      "result": "exact-fit grants ok/remaining 0; +1 denies over_quota; None/'' -> unauthorized; current>max -> over_quota with remaining -2; negative requested -> granted -3 'ok'",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; git status --porcelain; git hash-object on target files and contract",
+      "result": "diff limited to quota.py and test_quota.py; no staged-only content",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest test_quota; git ls-files; grep for allocate consumers",
+      "result": "4 tests OK; the only consumer of allocate is test_quota.py",
+      "execution": "executed",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "python3 -B -c boundary and None/'' probes",
+      "result": "allocate('t',5,5,10) -> ok; allocate('t',6,5,10) -> over_quota; None and '' -> unauthorized",
+      "execution": "executed",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probes for negative requested, whitespace tenant, None tenant",
+      "result": "negative requested granted as negative; '  ' tenant passes the gate; None -> unauthorized",
+      "execution": "executed",
+      "run_by": "security"
+    },
+    {
+      "command_or_inspection": "static read of quota.py and test_quota.py against R1-R3/I1",
+      "result": "all criteria met by code; boundary and deny-path shape not pinned by tests",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "static mutation reasoning over test_quota.py",
+      "result": "`>` to `>=` and extra keys on deny paths would not be caught by the tests",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation testing (for example `>` to `>=`)",
+      "reason": "would require editing source; the run is read-only. The boundary behavior was established by executed probes instead"
+    }
+  ],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test exercises the inclusive boundary current+requested == max_allowed, so `>` to `>=` at quota.py:4 would pass all tests",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "quota.py:4",
+        "test_quota.py grant case sums to 8 and deny case to 13; neither equals 10",
+        "lead probe allocate('t1',5,5,10) -> ok, allocate('t1',6,5,10) -> over_quota"
+      ],
+      "failure_mechanism": "future mutation `>`\u2192`>=` -> exact-fit denied -> tests still pass",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: lead-executed probes show the boundary is correct; the contract file does not require tests",
+      "rejection_reason": "test-strength on correct code: the boundary was verified correct by executed probes; there is no present defect. Merged duplicates acceptance-1 and invariants-1"
+    },
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "Required evidence for the inclusive boundary is unmet because no test pins it",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_quota.py has no case with sum == max_allowed",
+        "quota.py:4 uses `>`"
+      ],
+      "failure_mechanism": "`>`\u2192`>=` edit -> exact-fit denied -> suite passes",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of tests-1; test-strength on correct code",
+      "rejection_reason": "duplicate root cause of tests-1. The boundary evidence exists via lead-executed probes, so this is not a MISSING gap"
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "No test pins I2 (exact-fit grants, +1 denies)",
+      "requirement_or_invariant": "I2",
+      "evidence": [
+        "test_quota.py lacks sums of 10 or 11",
+        "probe allocate('t',5,5,10) -> ok; allocate('t',6,5,10) -> over_quota"
+      ],
+      "failure_mechanism": "future off-by-one edit -> regression ships undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of tests-1; the reviewer itself confirms the invariant holds now",
+      "rejection_reason": "duplicate root cause of tests-1; test-strength on correct code"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "Response-shape test covers only the ok path; deny paths have no key-set assertion",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "test_quota.py:33-34 checks keys only for allocate('t1',1,0,10)",
+        "quota.py:3 and quota.py:5 return exactly granted/reason/remaining"
+      ],
+      "failure_mechanism": "future extra key on a deny path -> R3 violated -> tests pass",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: deny-path shapes verified correct by reading and by lead probes",
+      "rejection_reason": "test-strength on correct code"
+    },
+    {
+      "id": "security-1",
+      "status": "NON_ISSUE",
+      "reviewer": "security",
+      "claim": "Negative requested is granted as a negative amount with reason 'ok', inflating remaining",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "quota.py:4 has no lower bound",
+        "probe allocate('t',-3,5,5) -> granted -3, ok, remaining 3"
+      ],
+      "failure_mechanism": "requested<0 -> negative grant -> a downstream caller could decrement usage",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "behavior is outside the contract",
+      "rejection_reason": "the contract defines no behavior for negative or invalid numeric inputs; R2's literal rule (current+requested <= max_allowed -> grant requested) is satisfied; the harm depends on a hypothetical downstream consumer, and the same caller supplies all arguments"
+    },
+    {
+      "id": "security-2",
+      "status": "NON_ISSUE",
+      "reviewer": "security",
+      "claim": "Whitespace-only tenant_id passes the R1 gate and reaches the quota math",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "quota.py:2 `if not tenant_id`",
+        "probe allocate('  ',1,0,5) -> ok"
+      ],
+      "failure_mechanism": "blank-but-truthy tenant -> gate does not fire -> grant issued",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "behavior is outside the contract",
+      "rejection_reason": "the contract requires denial only when tenant_id is empty; '  ' is not empty, so R1 and I1 are satisfied as written"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "The unauthorized response returns caller-supplied `current` as `remaining`, exposing an internal counter in violation of R3",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "quota.py:3 returns remaining=current"
+      ],
+      "failure_mechanism": "unauthorized call -> response carries current usage -> counter exposure",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "echoing a value the caller supplied is not exposure of internal state; the contract names no recipient less trusted than the caller, and it leaves deny-path `remaining` undefined"
+    },
+    {
+      "id": "lead-2",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "over_quota returns a negative remaining when current > max_allowed",
+      "requirement_or_invariant": "R3",
+      "evidence": [
+        "quota.py:5",
+        "lead probe allocate('t1',1,12,10) -> remaining -2"
+      ],
+      "failure_mechanism": "current already above max -> remaining < 0",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "the contract requires only that remaining is an int and does not define its value on deny paths; -2 is an int derived from caller inputs"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "unauthorized path echoes caller-supplied current as remaining",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "negative requested granted as negative amount",
+      "disposition": "adjudicated",
+      "finding_id": "security-1"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "deny-path remaining undefined; unauthorized echoes current",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "whitespace-only tenant_id passes the gate",
+      "disposition": "adjudicated",
+      "finding_id": "security-2"
+    },
+    {
+      "reviewer": "security",
+      "note": "negative remaining on over_quota is a spec ambiguity",
+      "disposition": "adjudicated",
+      "finding_id": "lead-2"
+    },
+    {
+      "reviewer": "tests",
+      "note": "deny-path remaining unspecified; negative/zero requested untested",
+      "disposition": "adjudicated",
+      "finding_id": "security-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "no inclusive-boundary test; whitespace tenant passes the gate",
+      "disposition": "adjudicated",
+      "finding_id": "tests-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "d0eb8cc7f3a60f1ef8b13452499b76c21457f63e",
+    "files": {
+      "quota.py": "4c212236b9734cbfda3b2166f2ef1bd872d26c5c",
+      "test_quota.py": "4f6716241df8e332860419f13043b88119c4e2de"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required for the verdict. Optionally add tests for exact-fit (5,5,10 -> ok) and +1 (6,5,10 -> over_quota), and assert the key set on the deny paths, to guard against future regressions"
+}

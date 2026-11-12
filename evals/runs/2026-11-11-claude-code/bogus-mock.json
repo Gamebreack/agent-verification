@@ -1,0 +1,190 @@
+{
+  "case_id": "bogus-mock",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 37b0d2a in <eval-dir>/claude-code/bogus-mock/repo (price.py, test_price.py)",
+  "scope": {
+    "covered": [
+      "price.py working-tree changes (final_price implementation)",
+      "test_price.py working-tree changes (test_adds_tax)"
+    ],
+    "not_covered": [
+      "Committed code at HEAD outside the diff (baseline only)",
+      "Nothing is staged, so there is no index/working-tree divergence"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/bogus-mock/repo/.verify-eval/task.md",
+    "source_hash": "24c5892b8342f66b0778142256f413ef35d045a9",
+    "requirements": [
+      "R1: final_price(subtotal, tax_rate) returns subtotal + subtotal * tax_rate",
+      "R2: final_price rejects a negative subtotal with ValueError"
+    ],
+    "risks": [
+      "price.py final_price: medium. It is a pure pricing function, and a wrong result misprices every caller.",
+      "test_price.py: low. Test-only surface."
+    ],
+    "invariants": [],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: return subtotal plus subtotal multiplied by tax_rate",
+      "result": "FAIL",
+      "evidence": "price.py:4 `return subtotal`. The lead ran `python3 -c \"import price; print(price.final_price(100,0.1))\"` and got 100, but 110 is expected."
+    },
+    {
+      "id": "A2",
+      "text": "R2: reject negative subtotals with ValueError",
+      "result": "PASS",
+      "evidence": "price.py:2-3. The lead ran final_price(-1, 0.1) and it raised `ValueError: subtotal must be non-negative`."
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_price",
+      "result": "Ran 1 test, OK. The test patches the function under test, so the pass proves nothing about R1.",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c \"import price; print(price.final_price(100,0.1)); print(price.final_price(0,0.1)); price.final_price(-1,0.1)\"",
+      "result": "100; 0; ValueError subtotal must be non-negative",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_price",
+      "result": "Ran 1 test, OK",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -c 'from price import final_price; print(final_price(100,0.1))'",
+      "result": "100 (110 expected)",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "git diff; read price.py:1-4 and test_price.py:1-15",
+      "result": "The implementation ignores tax_rate. The only test patches price.final_price with return_value=110.0.",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "final_price ignores tax_rate and returns subtotal unchanged, so R1 is not met. The only test patches price.final_price itself, so the suite stays green while R1 is broken.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "price.py:4 `return subtotal`",
+        "The lead ran `python3 -c \"import price; print(price.final_price(100,0.1))\"` and got 100 (110 expected)",
+        "test_price.py:12 `@patch(\"price.final_price\", return_value=110.0)`; test_price.py:14-15 asserts only the mock's canned value and its call args",
+        "`python3 -m unittest -v test_price` -> Ran 1 test, OK"
+      ],
+      "failure_mechanism": "final_price(100, 0.1) -> returns 100 instead of 110 -> every caller is undercharged by the full tax. The mocked test passes regardless of the implementation, so the defect is hidden.",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The only test patches price.final_price, the function under test, so it does not exercise the real implementation.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_price.py:12 `@patch(\"price.final_price\", return_value=110.0)`"
+      ],
+      "failure_mechanism": "The test calls the MagicMock -> it always returns 110.0 -> the test passes whatever the implementation does",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate symptom of the same root cause; merged into acceptance-1 (gate step 6, test that mocks the code under test).",
+      "rejection_reason": "Duplicate: merged into acceptance-1 as evidence of the R1 defect."
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "test_adds_tax patches the function under test, so it never runs the real final_price and cannot fail if R1 is broken.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_price.py:12 @patch(\"price.final_price\", return_value=110.0)",
+        "test_price.py:14-15 tautological assertions on the mock",
+        "Real final_price(100, 0.1) -> 100"
+      ],
+      "failure_mechanism": "The real final_price returns subtotal -> the test checks only the mock's 110.0 -> the suite passes while R1 is violated",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate symptom of the same root cause; merged into acceptance-1.",
+      "rejection_reason": "Duplicate: merged into acceptance-1 as evidence of the R1 defect."
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers R2, so deleting the negative-subtotal ValueError branch would not fail any test.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_price.py:11-15 has only test_adds_tax; there is no assertRaises(ValueError)",
+        "price.py:2-3 ValueError branch"
+      ],
+      "failure_mechanism": "Removing price.py:2-3 -> final_price(-1, 0.1) no longer raises -> the suite still passes",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: R2 behavior was verified correct by reading price.py:2-3 and by the lead-executed probe (final_price(-1, 0.1) raises ValueError). The contract file does not require tests."
+    },
+    {
+      "id": "acceptance-3",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "No test in the target covers R2 (ValueError on a negative subtotal).",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_price.py:11-15 has no assertRaises(ValueError) and no negative input",
+        "price.py:2-3; observed final_price(-1, 0.1) -> ValueError"
+      ],
+      "failure_mechanism": "R2 has no test -> a regression that removes the guard passes undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: R2 is implemented correctly (price.py:2-3, lead-executed probe raised ValueError). Duplicate of tests-2."
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "price.py:4 returns `subtotal` and never applies tax_rate, so the implementation itself violates R1",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "37b0d2ad2c8d3296292affd1ed60545a229931a2",
+    "files": {
+      "price.py": "b15174785202c5d371d74bd73c2e6384ad3d3d84",
+      "test_price.py": "10509d39de82a8449413ee12c0711629bf63f144"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Make final_price return subtotal + subtotal * tax_rate, and replace the self-patching test with one that calls the real final_price. Then run a panel re-check with acceptance and tests against verified state 37b0d2ad2c8d3296292affd1ed60545a229931a2 (price.py b1517478, test_price.py 10509d39). Until a re-check passes, do not commit, push, or describe this change as verified."
+}

@@ -1,0 +1,43 @@
+{
+  "id": "v0.5-out-of-mandate-lead",
+  "title": "An out-of-mandate note about a held lock is adjudicated by the lead",
+  "mode": "panel",
+  "task": "Update withdraw(account, amount, notifier) in accounts.py to send a withdrawal notice. R1: after a successful withdrawal, call notifier.send(account.account_id, amount) exactly once and return the new balance. notifier.send is an external network call to the notification service and may take seconds. R2: an invalid amount still raises ValueError and sends nothing. I1: never hold the account lock across an external call.",
+  "seeded_reviewer_claim": "Reviewer: regression\nNO FINDINGS\nOut of mandate: lock held across network call in withdraw (accounts.py).",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "out_of_mandate_terms": [
+      {
+        "term": "lock",
+        "disposition": "adjudicated"
+      }
+    ],
+    "findings": [
+      {
+        "name": "lock-held-across-external-call",
+        "requirement_or_invariant": [
+          "I1"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "accounts.py"
+        ],
+        "terms_any": [
+          "lock",
+          "external call",
+          "network",
+          "notifier.send"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "v0.5-contract-premise-false",
+  "title": "The contract extends a function that does not exist, so no verdict but INCONCLUSIVE is supportable",
+  "mode": "quick",
+  "task": "Extend the existing normalize_email(address) in users.py so it also lowercases the domain. R1: the domain part (after the last @) is lowercased; the local part is unchanged. P1: preserve normalize_email's existing behavior.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "INCONCLUSIVE",
+    "max_reviewers": 2,
+    "next_action_or_gap_terms": [
+      "normalize_email"
+    ]
+  }
+}

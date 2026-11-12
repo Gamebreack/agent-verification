@@ -1,0 +1,108 @@
+{
+  "case_id": "v0.5-staged-differs",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff vs HEAD 2d3b803 (git diff HEAD): slug.py, test_slug.py",
+  "scope": {
+    "covered": [
+      "working-tree content of slug.py and test_slug.py compared with HEAD 2d3b803; this includes both staged and unstaged edits as they appear in the working tree"
+    ],
+    "not_covered": [
+      "The staged (index) content is different from the working tree and was not reviewed. The staged slug.py (index blob a88457d) uses re.sub(r\"[^a-z]+\", ...), which drops digits. Committing only the index would therefore not commit what was verified.",
+      "Branch commits: none beyond base. No origin/HEAD resolved, so the base is local main, which equals HEAD.",
+      "Files outside the diff"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-staged-differs/repo/.verify-eval/task.md",
+    "source_hash": "4578adcf81d1c4a01138bd29dcb90954a13a5bc3",
+    "requirements": [
+      "R1: slugify(title) lowercases the title, keeps ASCII letters and digits, replaces each run of any other characters with a single hyphen, and strips leading and trailing hyphens. Example: \"  Release 2.0 Notes! \" becomes \"release-2-0-notes\"."
+    ],
+    "risks": [
+      "slug.slugify (a pure function with no persisted or cross-boundary consumers in the repo): low"
+    ],
+    "invariants": [
+      "I1: output contains only [a-z0-9-], has no consecutive hyphens and no leading or trailing hyphen (or is empty)"
+    ],
+    "preserved_behaviors": [
+      "P1: slugify(\" Hello World \") == \"hello-world\""
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: lowercase the title, keep ASCII letters and digits, replace each run of any other characters with a single hyphen, and strip leading and trailing hyphens. Example: \"  Release 2.0 Notes! \" becomes \"release-2-0-notes\".",
+      "result": "PASS",
+      "evidence": "slug.py:4-5 re.sub(r\"[^a-z0-9]+\", \"-\", title.lower()).strip(\"-\"); test_slug.py:10-11 asserts the example; the unittest run passed 2/2; a lead probe returned 'release-2-0-notes', '---a__b---'->'a-b', 'v1.2.3-RC'->'v1-2-3-rc', '!!!'->''"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline (carried in one reviewer context with tests)",
+    "tests": "quick-mode baseline (carried in one reviewer context with acceptance)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_slug",
+      "result": "Ran 2 tests, OK (test_simple_title, test_keeps_digits_and_collapses_separators)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "ad-hoc slugify probe on sample inputs (example, repeated separators, digits, empty, punctuation-only, non-ASCII)",
+      "result": "All outputs match R1 and I1. The probe's interpreter wrote __pycache__/, which the lead removed, leaving the tree as it was",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff HEAD / git diff --cached / git show :slug.py",
+      "result": "The working tree keeps [a-z0-9]; the index keeps only [a-z] (staged content is different)",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "Acceptance trace of A1 to slug.py:4-5 and test_slug.py:7-11",
+      "result": "A1 PASS, no findings",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "Sabotage reasoning: removing digits from the class, removing the run-collapse '+', removing strip('-'), removing lower()",
+      "result": "test_slug.py:7-8 and/or :10-11 catches each one; no material mutation survives",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "none is configured in the repository; sabotage was reasoned statically instead"
+    }
+  ],
+  "findings": [],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": ".verify-eval/digest not read; no runtime behavior inspected beyond the provided command output",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "2d3b803d3b6b2de73401049fddb784dfbda9783f",
+    "files": {
+      "slug.py": "4ed91f3beaf5c1a65c8c9e733fbd99e75c23db31",
+      "test_slug.py": "63408bde4756159499366f5691d94bb90e2ddb66"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None needed for the verdict. Before committing, stage the working-tree slug.py (blob 4ed91f3) and test_slug.py (blob 63408bd). The currently staged slug.py keeps only [a-z] and drops digits, so a commit of the index would not be the verified state."
+}

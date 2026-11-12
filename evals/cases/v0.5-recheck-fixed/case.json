@@ -1,0 +1,128 @@
+{
+  "id": "v0.5-recheck-fixed",
+  "title": "Re-check after both prior findings were fixed, although the note claims only one",
+  "mode": "panel",
+  "task": "Add a burst limit to the client settings. R1: allow_request(recent_requests, burst) in rate.py returns True exactly when recent_requests <= burst. R2: client_settings() in settings.py returns {\"timeout\": DEFAULT_TIMEOUT, \"burst\": DEFAULT_BURST} with DEFAULT_BURST = 10. I1: the burst limit is inclusive: exactly burst recent requests are still allowed. P1: DEFAULT_TIMEOUT stays 30 seconds; existing clients rely on it.",
+  "previous": "previous",
+  "prior_report": {
+    "case_id": null,
+    "verdict": "FIX REQUIRED",
+    "assurance": "independent panel",
+    "requested_mode": "panel",
+    "effective_mode": "panel",
+    "target": "working-tree diff",
+    "scope": {
+      "covered": [
+        "rate.py",
+        "settings.py",
+        "test_rate.py",
+        "test_settings.py"
+      ],
+      "not_covered": [
+        "pre-existing code outside the diff"
+      ]
+    },
+    "contract_summary": {
+      "source_of_truth": "--contract .verify-eval/task.md",
+      "source_hash": "84f91512a9cbfe74b92a83326735b57c47131034",
+      "requirements": [
+        "R1: allow_request(recent_requests, burst) in rate.py returns True exactly when recent_requests <= burst.",
+        "R2: client_settings() in settings.py returns {\"timeout\": DEFAULT_TIMEOUT, \"burst\": DEFAULT_BURST} with DEFAULT_BURST = 10."
+      ],
+      "risks": [],
+      "invariants": [
+        "I1: the burst limit is inclusive: exactly burst recent requests are still allowed."
+      ],
+      "preserved_behaviors": [
+        "P1: DEFAULT_TIMEOUT stays 30 seconds; existing clients rely on it."
+      ]
+    },
+    "criteria": [
+      {
+        "id": "A1",
+        "text": "R1: allow_request(recent_requests, burst) returns True exactly when recent_requests <= burst, including recent_requests == burst.",
+        "result": "FAIL",
+        "evidence": "rate.py:2 uses recent_requests < burst"
+      },
+      {
+        "id": "A2",
+        "text": "R2: client_settings() returns {\"timeout\": DEFAULT_TIMEOUT, \"burst\": DEFAULT_BURST} with DEFAULT_BURST = 10.",
+        "result": "PASS",
+        "evidence": "settings.py:2,6"
+      }
+    ],
+    "selected_reviewers": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "selection_reasons": {},
+    "checks_executed": [
+      {
+        "command_or_inspection": "python3 -m unittest",
+        "result": "OK",
+        "execution": "executed",
+        "run_by": "tests"
+      }
+    ],
+    "checks_not_run": [],
+    "findings": [
+      {
+        "id": "F1",
+        "status": "VALIDATED",
+        "reviewer": "invariants",
+        "claim": "allow_request rejects a client at exactly burst recent requests.",
+        "requirement_or_invariant": "I1",
+        "evidence": [
+          "rate.py:2 uses recent_requests < burst"
+        ],
+        "failure_mechanism": "recent_requests == burst -> allow_request returns False -> a permitted request is refused",
+        "proposed_severity": "SHOULD_FIX",
+        "severity": "SHOULD_FIX",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      },
+      {
+        "id": "F2",
+        "status": "VALIDATED",
+        "reviewer": "regression",
+        "claim": "DEFAULT_TIMEOUT changed from 30 to 60 seconds.",
+        "requirement_or_invariant": "P1",
+        "evidence": [
+          "settings.py:1 sets DEFAULT_TIMEOUT = 60"
+        ],
+        "failure_mechanism": "existing clients read client_settings() -> timeout doubles -> P1 broken",
+        "proposed_severity": "SHOULD_FIX",
+        "severity": "SHOULD_FIX",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      }
+    ],
+    "out_of_mandate": [],
+    "evidence_gaps": [],
+    "verified_state": null,
+    "recheck": null,
+    "source_unchanged": true,
+    "minimum_next_action": "Fix F1, F2; do not commit or ship as verified until a re-check (acceptance, tests, invariants, regression) against this verified state passes. Make the limit inclusive and restore DEFAULT_TIMEOUT = 30."
+  },
+  "handoff_note": "Addressed the invariants finding (F1): the burst limit is inclusive now, with a new boundary test.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "exact_reviewers": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "max_reviewers": 4,
+    "recheck_roles": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "another_round_required": false
+  }
+}

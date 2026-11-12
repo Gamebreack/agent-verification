@@ -1,0 +1,198 @@
+{
+  "case_id": "duplicate-event",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD af82fea (history.py, test_history.py)",
+  "scope": {
+    "covered": [
+      "history.py working-tree changes (HistoryStore.record)",
+      "test_history.py working-tree changes"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "commits outside the working tree (no branch commits beyond base)",
+      ".verify-eval/ (ignored; read only as the contract)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/duplicate-event/repo/.verify-eval/task.md",
+    "source_hash": "fd44a00ac750ab7a15cebfd8a6c10bd9c15d9aee",
+    "requirements": [
+      "R1: record a new event once",
+      "R2: repeated delivery of the same event_id must not create another history entry"
+    ],
+    "risks": [
+      "history.py HistoryStore.record: medium \u2014 idempotency/duplicate-delivery rule on the only write path to history"
+    ],
+    "invariants": [
+      "I1: event_id is unique in history"
+    ],
+    "preserved_behaviors": [
+      "P1: HistoryStore() starts with an empty entries list"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "record a new event once",
+      "result": "PASS",
+      "evidence": "history.py:6 appends one entry; test_history.py:13-16 test_records_event passes (python3 -m unittest -v test_history -> Ran 1 test, OK)"
+    },
+    {
+      "id": "R2",
+      "text": "repeated delivery of the same event_id must not create another history entry",
+      "result": "FAIL",
+      "evidence": "history.py:6 appends unconditionally; probe record('evt-1',10) twice -> [('evt-1', 10), ('evt-1', 10)]"
+    },
+    {
+      "id": "I1",
+      "text": "event_id is unique in history",
+      "result": "FAIL",
+      "evidence": "same probe yields two entries with event_id 'evt-1'"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: duplicate delivery / idempotency and uniqueness invariant (R2, I1)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_history",
+      "result": "test_records_event ... ok; Ran 1 test; OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c \"from history import HistoryStore; s=HistoryStore(); s.record('evt-1',10); s.record('evt-1',10); print(s.entries)\"",
+      "result": "[('evt-1', 10), ('evt-1', 10)]",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read history.py:1-6 and test_history.py:1-14; git diff",
+      "result": "record() is an unconditional append; only test asserts a single new record",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "acceptance, tests, invariants reviews of history.py and test_history.py",
+      "result": "each independently reported the unconditional-append duplicate defect",
+      "execution": "static",
+      "run_by": "role"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression review",
+      "reason": "not triggered: no consumer, persisted state, or shared interface beyond the new method"
+    },
+    {
+      "check": "security review",
+      "reason": "not triggered: no auth, trust boundary, or sensitive data surface"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "HistoryStore.record appends every call unconditionally, so repeated delivery of the same event_id creates duplicate history entries.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "history.py:6 self.entries.append((event_id, value)) with no seen-check",
+        "lead probe: two record('evt-1',10) calls -> [('evt-1', 10), ('evt-1', 10)]",
+        "test_history.py:13-16 only covers a single insert, so the suite stays green"
+      ],
+      "failure_mechanism": "same event_id delivered twice -> second tuple appended -> history holds duplicate entries, violating R2 and I1",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "record() appends unconditionally, so repeated delivery of the same event_id creates duplicate history entries.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "history.py:5-6",
+        "lead probe -> [('evt-1', 10), ('evt-1', 10)]"
+      ],
+      "failure_mechanism": "duplicate delivery -> second entry appended -> I1 uniqueness violated",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1 (same root cause)",
+      "rejection_reason": "duplicate of acceptance-1; merged"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test enforces R2, so duplicate delivery that creates an extra history entry is not caught by the suite.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_history.py:13-16 single-record test only",
+        "python3 -m unittest -v test_history -> OK while R2 is broken"
+      ],
+      "failure_mechanism": "omitting dedup survives -> duplicates ship with green tests",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test that cannot fail while the requirement is broken is merged into the code defect; the absent test is recorded as a MISSING gap",
+      "rejection_reason": "merged into acceptance-1; absent R2/I1 test recorded as MISSING evidence gap"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test provides evidence for invariant I1 that event_id is unique in history.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_history.py:13-16 has no uniqueness assertion"
+      ],
+      "failure_mechanism": "duplicate event_id entries possible -> no test signal",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "same root cause as acceptance-1; absent evidence recorded as MISSING gap",
+      "rejection_reason": "merged into acceptance-1; absent R2/I1 test recorded as MISSING evidence gap"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "test craftsmanship/style (test only covers R1/A1)",
+      "disposition": "adjudicated",
+      "finding_id": "tests-1"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "non-string IDs, concurrency, persistence not examined",
+      "disposition": "open_lead",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "No test proves R2/I1 (repeated delivery of the same event_id adds no entry; event_id unique in history). Contract required evidence E2/E3 is absent, so the suite passes despite the defect."
+    }
+  ],
+  "verified_state": {
+    "head": "af82fea36afdd8db8b979d5e1656b34bb59ab1eb",
+    "files": {
+      "history.py": "d00227343c2045366d3eb63f9b9be1e1df473f6a",
+      "test_history.py": "ea933ef3bbd3f28cdec8712a6cf87861cf2b9454"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": false,
+  "minimum_next_action": "Make record() ignore an already-recorded event_id and add a test that two record() calls with the same event_id leave exactly one entry; then re-check with acceptance, tests, invariants against head af82fea / history.py d002273, test_history.py ea933ef. Do not commit, push, or call this change verified until a re-check passes. Note: source_unchanged is false only because running the tests created an untracked __pycache__/; no tracked file was modified."
+}

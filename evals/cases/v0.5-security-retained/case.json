@@ -1,0 +1,19 @@
+{
+  "id": "v0.5-security-retained",
+  "title": "Three specialists trigger in panel mode; security is retained and a low-risk role is omitted",
+  "mode": "panel",
+  "task": "Update the local sync cache in sync.py. R1: save_cache(path, entries) writes the JSON object {\"version\": 2, \"entries\": entries}; load_cache(path) returns the entries of a version-2 file and {} for a missing, unreadable, or older-format file. R2: MAX_ATTEMPTS becomes 5, and should_retry(attempts_made) returns True exactly when attempts_made < MAX_ATTEMPTS, so a sync is attempted at most MAX_ATTEMPTS times in total. R3: clear_cache(user, path) deletes the cache file only when user.is_admin is True; for any other user it raises PermissionError and leaves the file in place. Risk: the cache file format is low impact, because the cache is local and regenerable and an unreadable or old-format file only causes a cache miss. The retry counter is low impact, because an off-by-one costs at most one background attempt more or less. The admin-only check is medium impact: unauthorized clearing only forces a cache rebuild.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS WITH NOTES",
+    "required_reviewers": [
+      "acceptance",
+      "tests",
+      "security"
+    ],
+    "max_reviewers": 4,
+    "evidence_gap_kinds": [
+      "UNAVAILABLE"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "id": "v0.5-no-shell-reviewers",
+  "title": "Reviewers cannot run commands, so the lead runs the required test command",
+  "mode": "panel",
+  "task": "Add fahrenheit_to_celsius(fahrenheit) to temperature.py. R1: return (fahrenheit - 32) * 5 / 9 as a float. P1: celsius_to_fahrenheit is unchanged. E1 (required evidence): run the project's unittest suite (python3 -m unittest) in this run and observe it pass.",
+  "reviewer_capability": "no-shell",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "checks": [
+      {
+        "execution": "executed",
+        "run_by": "lead",
+        "command_terms": [
+          "unittest"
+        ]
+      }
+    ]
+  }
+}

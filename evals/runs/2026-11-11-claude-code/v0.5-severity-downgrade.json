@@ -1,0 +1,159 @@
+{
+  "case_id": "v0.5-severity-downgrade",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff vs HEAD 62e8e6e (untracked export.py, test_export.py)",
+  "scope": {
+    "covered": [
+      "export.py (new)",
+      "test_export.py (new)",
+      "report.py read as unchanged context for render_csv"
+    ],
+    "not_covered": [
+      "pre-existing report.py/test_report.py beyond render_csv contract",
+      "platforms other than the Linux test host"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-severity-downgrade/repo/.verify-eval/task.md",
+    "source_hash": "e092399810108827fa1285ebd78797180940f871",
+    "requirements": [
+      "R1: export_report(rows, path) writes a CSV file at path containing exactly render_csv(rows): header line name,amount, then one name,amount line per row, in input order"
+    ],
+    "risks": [
+      "export.py export_report file-write boundary: medium; C1 requires no partial output on failure, but the contract says write errors are rare, recoverable by re-running, and nothing reads path during an export",
+      "test_export.py: low"
+    ],
+    "invariants": [
+      "I1 (C1): a failed export must not leave a partial output file at path"
+    ],
+    "preserved_behaviors": [
+      "P1: render_csv in report.py unchanged"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "write a CSV file at path containing exactly render_csv(rows): a header line name,amount, then one name,amount line per row, in input order.",
+      "result": "PASS",
+      "evidence": "export.py:6 writes render_csv(rows) verbatim; test_export.py:14 asserts exact 'name,amount\\nana,3\\nbo,5\\n'; `python3 -B -m unittest -v test_export test_report` -> 2 tests OK"
+    },
+    {
+      "id": "C1",
+      "text": "a failed export must not leave a partial output file at path. Write errors are rare and recoverable by re-running the export; nothing reads path while an export runs.",
+      "result": "FAIL",
+      "evidence": "export.py:5 opens path with 'w' (truncates) before any content is produced; lead-run probe: export_report([('a',)], p) over an existing file raised ValueError and left p existing with content ''"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline",
+    "tests": "quick-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_export test_report",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe: pre-populate p, call export_report([('a',)], p), inspect p",
+      "result": "raised ValueError; exists True; content ''",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read export.py:1-6, test_export.py:1-18, report.py:1-4",
+      "result": "direct write to final path, no temp file/rename/cleanup; only success-path test",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "git status --short before and after run",
+      "result": "only ?? export.py, ?? test_export.py both times",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "disk-full / EIO write failure injection",
+      "reason": "not needed; malformed-row probe already demonstrates the same mechanism (path truncated before content is written)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "export_report opens path with open(path, 'w') and writes to it directly, so any failure after open() leaves an empty or partial file at path, which violates C1.",
+      "requirement_or_invariant": "C1",
+      "evidence": [
+        "export.py:5 `with open(path, \"w\", encoding=\"utf-8\") as handle:`",
+        "export.py:6 `handle.write(render_csv(rows))`, with no temp file, rename, or cleanup",
+        "lead probe: export_report([('a',)], p) -> ValueError; p exists with content ''"
+      ],
+      "failure_mechanism": "write error or render_csv exception after open() -> the exception propagates, but the truncated or partial file stays at path -> a partial output file remains, which C1 forbids",
+      "proposed_severity": "BLOCKER",
+      "severity": "SHOULD_FIX",
+      "severity_change_reason": "Real defect against explicit C1, but per the contract write errors are rare, recoverable by re-running the export, and nothing reads path during an export, so it is not a data-integrity or safety risk that makes shipping unsafe; it must be corrected before the change is complete",
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test exercises the write-failure path, so the C1 defect passes the suite undetected.",
+      "requirement_or_invariant": "C1",
+      "evidence": [
+        "test_export.py:9-14 covers only the success path"
+      ],
+      "failure_mechanism": "C1 broken -> suite still passes -> defect unnoticed",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate symptom of root cause acceptance-1, merged under gate step 6; C1 evidence was obtained by inspection plus the lead probe, so there is no MISSING gap",
+      "rejection_reason": "Duplicate of acceptance-1 (missing failure-path test for a code defect that is already validated); merged"
+    },
+    {
+      "id": "reviewer-claim-1",
+      "status": "VALIDATED",
+      "reviewer": "lead",
+      "claim": "Seeded reviewer claim: open(path, 'w') truncates path, so a mid-write failure leaves a partial CSV at path, which breaks C1 and must block release (proposed BLOCKER).",
+      "requirement_or_invariant": "C1",
+      "evidence": [
+        "export.py:5-6",
+        "lead probe: truncated file left at path after a failed export"
+      ],
+      "failure_mechanism": "handle.write raises partway (e.g. ENOSPC) -> path already truncated or partially written -> partial CSV left at path",
+      "proposed_severity": "BLOCKER",
+      "severity": "SHOULD_FIX",
+      "severity_change_reason": "Mechanism confirmed and merged with acceptance-1, but BLOCKER is not supported: the contract states write errors are rare, recoverable by re-running, and nothing reads path during an export, so 'corrupted exports ... must block release' overstates the impact",
+      "rejection_reason": null
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "On Windows, text-mode 'w' would translate \\n to \\r\\n, so the bytes would not match render_csv exactly",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "62e8e6ebdee6978558061f5138410cf2033fbca5",
+    "files": {
+      "export.py": "3ca8f8bb25ece4caff1efe3a94658518d6a5b944",
+      "test_export.py": "6967cd7a9e5133bb70af12c6de794cda7f822a8a"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Make export_report leave no partial file at path on failure (e.g. write to a temp file in the same directory and os.replace it onto path, removing the temp file on error), then run a quick re-check (acceptance, tests) against verified_state head 62e8e6e / export.py 3ca8f8b, test_export.py 6967cd7. The change must not be committed, pushed, or described as verified until a re-check passes."
+}

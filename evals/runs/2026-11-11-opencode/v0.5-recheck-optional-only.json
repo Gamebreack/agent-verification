@@ -1,0 +1,165 @@
+{
+  "case_id": "v0.5-recheck-optional-only",
+  "verdict": "PASS WITH NOTES",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "re-check delta since verified state 1da339a4eed840c8b0724ecf245322c64fa0963f: working-tree modification of test_amounts.py (no new commits; amounts.py unchanged, blob 3761dd1b matches recorded hash)",
+  "scope": {
+    "covered": [
+      "test_amounts.py (working-tree diff vs HEAD 1da339a; file of open prior finding F1)",
+      "amounts.py (read for re-confirmation; content unchanged since prior verified state)"
+    ],
+    "not_covered": [
+      "money.py and test_money.py (baseline commit ac1265f, outside the target)",
+      "pre-existing code outside the re-check delta",
+      "staged content: none differs from the working tree"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract .verify-eval/task.md",
+    "source_hash": "04afd815516317ac943f0c1b345cf056bb7eef90",
+    "requirements": [
+      "R1: parse a non-negative decimal string with at most two decimal places (\"7\", \"12.5\", \"12.50\") into integer cents (700, 1250, 1250).",
+      "R2: raise ValueError for a negative amount.",
+      "C1: the tests are hermetic: they must not create or modify files outside a temporary directory.",
+      "N1 (optional, not required): the ValueError message for R2 includes the rejected text."
+    ],
+    "risks": [],
+    "invariants": [],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: parse_amount(\"7\"), parse_amount(\"12.5\") and parse_amount(\"12.50\") return 700, 1250 and 1250.",
+      "result": "PASS",
+      "evidence": "amounts.py:4-11; test_amounts.py:9-16 asserts [700, 1250, 1250]; PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v -> test_parses_amounts_from_a_fixture_file ok"
+    },
+    {
+      "id": "A2",
+      "text": "R2: parse_amount raises ValueError for a negative amount.",
+      "result": "PASS",
+      "evidence": "amounts.py:9-10; test_amounts.py:18-20; PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v -> test_rejects_negative ok"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "re-check panel baseline for prior effective mode panel",
+    "tests": "re-check panel baseline for prior effective mode panel; owns open prior finding F1 (C1 hermeticity)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git hash-object .verify-eval/task.md",
+      "result": "04afd815516317ac943f0c1b345cf056bb7eef90, equal to prior contract_summary.source_hash, so the re-check is eligible",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git rev-parse HEAD; git status --porcelain --untracked-files=all; git hash-object amounts.py test_amounts.py",
+      "result": "HEAD 1da339a (no commits since verified state); only test_amounts.py modified (2ac772d9 vs recorded aa8c59dc); amounts.py 3761dd1b unchanged",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v",
+      "result": "Ran 3 tests, OK, rc=0 (test_parses_amounts_from_a_fixture_file ok, test_rejects_negative ok, test_formats ok)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git status --porcelain --untracked-files=all --ignored before and after the unittest run, diffed",
+      "result": "identical; no amounts_fixture.txt or other file created in the repository",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -I -c (import parse_amount; call parse_amount('-3') and print the ValueError message)",
+      "result": "message 'negative amount'; does not include the rejected text '-3'",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "trace of A1/A2 to amounts.py:4-11 and test_amounts.py:9-20",
+      "result": "NO FINDINGS; A1 PASS, A2 PASS",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "re-confirmation of F1 and a sabotage set (drop negative check, constant return, altered *100 scaling, int-only parsing) against test_amounts.py",
+      "result": "NO FINDINGS; F1 resolved; every sabotage is caught by test_parses_amounts_from_a_fixture_file or test_rejects_negative",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation testing",
+      "reason": "no mutation tooling configured in the project; replaced by the tests reviewer's static sabotage analysis"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F2",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "The ValueError message for a negative amount does not include the rejected text.",
+      "requirement_or_invariant": "N1",
+      "evidence": [
+        "amounts.py:10 raises ValueError(\"negative amount\") (unchanged since prior verified state, blob 3761dd1b)",
+        "lead: parse_amount('-3') -> ValueError message 'negative amount'"
+      ],
+      "failure_mechanism": "parse_amount(\"-3\") -> message omits \"-3\" -> optional N1 not met",
+      "proposed_severity": "OPTIONAL",
+      "severity": "OPTIONAL",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "test_formats appears in the lead's unittest run but not in test_amounts.py; money.py/test_money.py exist in the repo",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "1da339a4eed840c8b0724ecf245322c64fa0963f",
+    "files": {
+      "amounts.py": "3761dd1b4595304ad493a78b36b5060e77c28701",
+      "test_amounts.py": "2ac772d978c5ff7a7df339c5b9b82c1cca419820"
+    }
+  },
+  "recheck": {
+    "round": 1,
+    "prior_verdict": "FIX REQUIRED",
+    "prior_findings": [
+      {
+        "id": "F1",
+        "resolution": "resolved",
+        "evidence": [
+          "test_amounts.py:10-15 writes and reads amounts_fixture.txt under tempfile.TemporaryDirectory() via os.path.join(tmp, ...), and the directory is removed on exit",
+          "lead: git status --porcelain --untracked-files=all --ignored identical before/after PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v (3 tests OK)"
+        ]
+      }
+    ],
+    "roles": [
+      "acceptance",
+      "tests"
+    ],
+    "delta": {
+      "commits": [],
+      "paths": [
+        "test_amounts.py"
+      ]
+    },
+    "another_round_required": false
+  },
+  "source_unchanged": true,
+  "minimum_next_action": "None required: F1 is resolved and no BLOCKER, SHOULD_FIX or MISSING gap remains. Optional: include the rejected text in the R2 ValueError message (amounts.py:10) to satisfy N1 and close carried-forward note F2. This is a re-check, so it opens no further round."
+}

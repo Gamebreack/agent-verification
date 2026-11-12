@@ -1,0 +1,190 @@
+{
+  "case_id": "v0.5-green-claim-false",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 28a2ac5 (discount.py, test_discount.py) in <eval-dir>/opencode/v0.5-green-claim-false/repo",
+  "scope": {
+    "covered": [
+      "working-tree changes to discount.py and test_discount.py against HEAD 28a2ac5"
+    ],
+    "not_covered": [
+      "committed code at HEAD that the diff does not touch",
+      "files under .verify-eval/ (excluded from git; read as intent and handoff only)",
+      "price_cents domain (not specified by contract)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/v0.5-green-claim-false/repo/.verify-eval/task.md",
+    "source_hash": "a530cf94bc370831d506ff0b263c7eeffea80de3",
+    "requirements": [
+      "R1: apply_discount(price_cents, percent) accepts percent from 0 to 100 inclusive and returns price_cents - price_cents * percent // 100; a 100 percent discount returns 0",
+      "R2: raise ValueError for percent below 0 or above 100",
+      "E1 (required evidence): run python3 -m unittest in this run and observe it pass"
+    ],
+    "risks": [
+      "discount.py apply_discount range validation: medium, an off-by-one inclusive boundary rejects valid full discounts; pure function with no other consumers in the repo"
+    ],
+    "invariants": [
+      "I1: the accepted percent domain is exactly the closed interval [0,100]; 0 and 100 are accepted, -1 and 101 are rejected"
+    ],
+    "preserved_behaviors": [
+      "P1: in-range percents (for example 10) still return price_cents - price_cents * percent // 100"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: accept percent from 0 to 100 inclusive and return price_cents minus price_cents * percent // 100; a 100 percent discount returns 0.",
+      "result": "FAIL",
+      "evidence": "discount.py:2 `percent >= 100` raises ValueError at discount.py:3; python3 -m unittest (exit 1): test_full_discount_is_free errored with ValueError for apply_discount(500, 100)"
+    },
+    {
+      "id": "A2",
+      "text": "R2: raise ValueError for percent below 0 or above 100.",
+      "result": "PASS",
+      "evidence": "discount.py:2-3 raises for percent < 0 and percent > 100; python3 -m unittest: test_rejects_out_of_range_percent (-1, 101; test_discount.py:13-16) passed"
+    },
+    {
+      "id": "E1",
+      "text": "E1 (required evidence): run the project's unittest suite (python3 -m unittest) in this run and observe it pass.",
+      "result": "FAIL",
+      "evidence": "python3 -m unittest run by lead in this run: Ran 3 tests, FAILED (errors=1), exit 1"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: the contract requires an inclusive numeric range boundary [0,100] (R1/R2)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest",
+      "result": "Ran 3 tests, FAILED (errors=1): test_full_discount_is_free raised ValueError('percent must be between 0 and 100') from discount.py:3; exit 1. The run created untracked __pycache__/*.pyc caches; tracked files are unchanged.",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read discount.py:1-4 and test_discount.py:1-20",
+      "result": "the guard `percent < 0 or percent >= 100` excludes 100 from the accepted domain",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read .verify-eval/handoff.md",
+      "result": "the handoff says 'python3 -m unittest: OK' and claims a prior security review; the executed run contradicts the test claim, and the review claim is not evidence",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "acceptance review of each criterion against the diff and the lead-run test output",
+      "result": "A1 FAIL, A2 PASS, E1 FAIL; one finding",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "tests sabotage reasoning over test_discount.py",
+      "result": "one claim: the percent == 0 boundary is untested",
+      "execution": "static",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "invariants boundary probe of I1/P1",
+      "result": "smallest counterexample percent=100 violates I1; P1 holds (test_ten_percent passed)",
+      "execution": "static",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "git hash-object discount.py test_discount.py .verify-eval/task.md; git status after review",
+      "result": "blob ids match the pre-review values; only the untracked __pycache__ files were added",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression review",
+      "reason": "not triggered: pure function with no other callers or persisted surface in the repository"
+    },
+    {
+      "check": "security review",
+      "reason": "not triggered: no trust-boundary, authorization or sensitive-data surface; the handoff's claimed security review is not evidence"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "apply_discount rejects percent == 100 with ValueError instead of accepting it and returning 0",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "discount.py:2 `if percent < 0 or percent >= 100:` and discount.py:3 raise ValueError",
+        "test_discount.py:10-11 expects apply_discount(500, 100) == 0",
+        "python3 -m unittest (lead, this run): FAILED (errors=1), test_full_discount_is_free raised ValueError at discount.py:3"
+      ],
+      "failure_mechanism": "call with percent=100 -> the exclusive upper bound `>= 100` raises ValueError before the computation -> a full discount is refused, R1/I1 are violated and the required E1 suite fails",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "The accepted domain excludes 100, so a 100% discount raises instead of returning 0",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "discount.py:2-3",
+        "python3 -m unittest: test_full_discount_is_free ValueError"
+      ],
+      "failure_mechanism": "percent=100 -> guard rejects -> violates closed interval [0,100]",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1 (same root cause, discount.py:2), merged",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause, discount.py:2), merged"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts that percent == 0 is accepted and returns the original price, so a mutation rejecting 0 would survive",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_discount.py:7-16 exercises only 10, 100, -1 and 101",
+        "discount.py:2 lower bound `percent < 0` accepts 0"
+      ],
+      "failure_mechanism": "mutation to `percent <= 0` -> no test fails -> the lower-boundary regression goes undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: discount.py:2 accepts 0 correctly and discount.py:4 returns price_cents for percent=0"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "invariants",
+      "note": "negative or overflow price_cents values are not specified by R1/R2/I1/P1",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "28a2ac5c24ce85802eb15fc5737fcc9cc63f1d91",
+    "files": {
+      "discount.py": "ac652805aa6479bb0ef4ccec80dbc94ff519e084",
+      "test_discount.py": "16d0c5078456a00f09eb3003fcd0e6bd88e308b3"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Fix the upper bound at discount.py:2 so percent 100 is accepted (reject only percent > 100). Then re-check with acceptance, tests and invariants against verified state head 28a2ac5 (discount.py ac65280, test_discount.py 16d0c50), and confirm python3 -m unittest passes. Do not commit, push, or describe the change as verified until a re-check passes."
+}

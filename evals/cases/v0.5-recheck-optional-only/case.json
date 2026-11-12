@@ -1,0 +1,139 @@
+{
+  "id": "v0.5-recheck-optional-only",
+  "title": "Re-check after the only blocking finding was fixed; the prior OPTIONAL finding, outside the fix delta, carries forward as a note",
+  "mode": "panel",
+  "task": "Add parse_amount(text) to amounts.py. R1: parse a non-negative decimal string with at most two decimal places (\"7\", \"12.5\", \"12.50\") into integer cents (700, 1250, 1250). R2: raise ValueError for a negative amount. C1: the tests are hermetic: they must not create or modify files outside a temporary directory. N1 (optional, not required): the ValueError message for R2 includes the rejected text.",
+  "previous": "previous",
+  "prior_report": {
+    "case_id": null,
+    "verdict": "FIX REQUIRED",
+    "assurance": "independent panel",
+    "requested_mode": "panel",
+    "effective_mode": "panel",
+    "target": "working-tree diff",
+    "scope": {
+      "covered": [
+        "amounts.py",
+        "test_amounts.py"
+      ],
+      "not_covered": [
+        "pre-existing code outside the diff"
+      ]
+    },
+    "contract_summary": {
+      "source_of_truth": "--contract .verify-eval/task.md",
+      "source_hash": "04afd815516317ac943f0c1b345cf056bb7eef90",
+      "requirements": [
+        "R1: parse a non-negative decimal string with at most two decimal places (\"7\", \"12.5\", \"12.50\") into integer cents (700, 1250, 1250).",
+        "R2: raise ValueError for a negative amount.",
+        "C1: the tests are hermetic: they must not create or modify files outside a temporary directory.",
+        "N1 (optional, not required): the ValueError message for R2 includes the rejected text."
+      ],
+      "risks": [],
+      "invariants": [],
+      "preserved_behaviors": []
+    },
+    "criteria": [
+      {
+        "id": "A1",
+        "text": "R1: parse_amount(\"7\"), parse_amount(\"12.5\") and parse_amount(\"12.50\") return 700, 1250 and 1250.",
+        "result": "PASS",
+        "evidence": "test_amounts.py:7-12"
+      },
+      {
+        "id": "A2",
+        "text": "R2: parse_amount raises ValueError for a negative amount.",
+        "result": "PASS",
+        "evidence": "amounts.py:9-10; test_amounts.py:14-16"
+      }
+    ],
+    "selected_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "selection_reasons": {},
+    "checks_executed": [
+      {
+        "command_or_inspection": "python3 -m unittest",
+        "result": "OK",
+        "execution": "executed",
+        "run_by": "tests"
+      }
+    ],
+    "checks_not_run": [],
+    "findings": [
+      {
+        "id": "F1",
+        "status": "VALIDATED",
+        "reviewer": "tests",
+        "claim": "test_amounts.py writes amounts_fixture.txt into the working directory and never removes it.",
+        "requirement_or_invariant": "C1",
+        "evidence": [
+          "test_amounts.py:8-9 opens amounts_fixture.txt for writing in the current directory"
+        ],
+        "failure_mechanism": "running the suite -> creates amounts_fixture.txt in the repository -> C1 broken and the working tree is dirtied",
+        "proposed_severity": "SHOULD_FIX",
+        "severity": "SHOULD_FIX",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      },
+      {
+        "id": "F2",
+        "status": "VALIDATED",
+        "reviewer": "acceptance",
+        "claim": "The ValueError message for a negative amount does not include the rejected text.",
+        "requirement_or_invariant": "N1",
+        "evidence": [
+          "amounts.py:10 raises ValueError(\"negative amount\")"
+        ],
+        "failure_mechanism": "parse_amount(\"-3\") -> message omits \"-3\" -> optional N1 not met",
+        "proposed_severity": "OPTIONAL",
+        "severity": "OPTIONAL",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      }
+    ],
+    "out_of_mandate": [],
+    "evidence_gaps": [],
+    "verified_state": null,
+    "recheck": null,
+    "source_unchanged": true,
+    "minimum_next_action": "Fix F1; do not commit or ship as verified until a re-check (acceptance, tests) against this verified state passes. Make the tests hermetic."
+  },
+  "handoff_note": "Fixed F1: the tests now use a temporary directory.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS WITH NOTES",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "recheck_roles": [
+      "acceptance",
+      "tests"
+    ],
+    "another_round_required": false,
+    "findings": [
+      {
+        "name": "prior-optional-note-carried-forward",
+        "id": "F2",
+        "requirement_or_invariant": [
+          "N1"
+        ],
+        "severities": [
+          "OPTIONAL"
+        ],
+        "evidence_paths": [
+          "amounts.py"
+        ],
+        "terms_any": [
+          "rejected text",
+          "message",
+          "-3",
+          "negative amount"
+        ]
+      }
+    ]
+  }
+}

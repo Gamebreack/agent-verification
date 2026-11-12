@@ -1,0 +1,211 @@
+{
+  "case_id": "v0.5-out-of-mandate-lead",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 09845a8 (accounts.py, test_accounts.py)",
+  "scope": {
+    "covered": [
+      "accounts.py working-tree diff (withdraw signature + notifier.send call)",
+      "test_accounts.py working-tree diff",
+      "repo-wide caller search for withdraw"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff beyond caller search",
+      "real notification service behavior",
+      "notifier failure/retry semantics (not specified by contract)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-out-of-mandate-lead/repo/.verify-eval/task.md",
+    "source_hash": "98471626f6714f1257e71d8bdcb23ec5476c7a66",
+    "requirements": [
+      "R1: after a successful withdrawal, call notifier.send(account.account_id, amount) exactly once and return the new balance; notifier.send is an external network call that may take seconds",
+      "R2: an invalid amount still raises ValueError and sends nothing"
+    ],
+    "risks": [
+      "withdraw() lock scope + external network call: high \u2014 concurrency on shared account state with a slow external dependency",
+      "withdraw() signature (new required notifier param): low \u2014 only caller is test_accounts.py and the contract mandates the signature"
+    ],
+    "invariants": [
+      "I1: never hold the account lock across an external call"
+    ],
+    "preserved_behaviors": [
+      "P1: amount <= 0 or amount > balance is rejected with ValueError, and validation + balance decrement happen under the account lock"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: a successful withdrawal calls notifier.send(account.account_id, amount) exactly once and returns the new balance",
+      "result": "PASS",
+      "evidence": "accounts.py:15-17; test_accounts.py:15-18; python3 -m unittest -v test_accounts -> 2 tests OK"
+    },
+    {
+      "id": "A2",
+      "text": "R2: an invalid amount raises ValueError and nothing is sent",
+      "result": "PASS",
+      "evidence": "accounts.py:13-14 raises before send at :16; test_accounts.py:21-24 asserts ValueError and sent == []"
+    },
+    {
+      "id": "A3",
+      "text": "I1: the account lock is not held while notifier.send runs",
+      "result": "FAIL",
+      "evidence": "accounts.py:12 `with account.lock:` encloses accounts.py:16 `notifier.send(...)`; lead probe printed `lock held during send: True`"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "regression": "public function signature changed (new required notifier parameter) observable by any caller",
+    "invariants": "concurrency (account lock) and external dependency call that may be slow or fail; contract invariant I1"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_accounts",
+      "result": "2 tests, OK (suite does not exercise lock state, so cannot detect I1 violation)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -c probe: notifier.send prints account.lock.locked() during withdraw(Account('a1',10),4,N())",
+      "result": "lock held during send: True; balance 6",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "grep -rn withdraw --include=*.py .",
+      "result": "only definition accounts.py:11 and callers in test_accounts.py; no other consumers",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read accounts.py:11-17 and git diff",
+      "result": "notifier.send added inside `with account.lock:` block",
+      "execution": "static",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "read accounts.py, test_accounts.py per-criterion",
+      "result": "A1 PASS, A2 PASS, A3 FAIL",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "read accounts.py:12-17, test_accounts.py:6-10; signature compatibility",
+      "result": "lock held across send; P1 preserved",
+      "execution": "static",
+      "run_by": "regression"
+    },
+    {
+      "command_or_inspection": "sabotage map over test_accounts.py",
+      "result": "lock-scope sabotage and amount<=0 branch undetected by suite",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "integration against the real notification service",
+      "reason": "external service not available; not needed to establish the lock-scope defect"
+    }
+  ],
+  "findings": [
+    {
+      "id": "invariants-1",
+      "status": "VALIDATED",
+      "reviewer": "invariants",
+      "claim": "withdraw() holds account.lock across the external notifier.send network call",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "accounts.py:12 `with account.lock:` encloses accounts.py:16 `notifier.send(account.account_id, amount)`",
+        "lead probe: `lock held during send: True`",
+        "duplicates merged: acceptance-1 (A3 FAIL), regression-1, tests-1 (suite passes with lock held: StubNotifier at test_accounts.py:6-10 never checks lock state), reviewer-claim.md Out-of-mandate note"
+      ],
+      "failure_mechanism": "any successful withdraw with a notifier.send that takes seconds -> the non-reentrant account lock is held for the full network call -> every other withdraw on that account blocks for the call's duration (indefinitely if send hangs; deadlock if send re-enters withdraw), directly violating the contract's explicit invariant I1",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "amount <= 0 branch and exact-balance boundary are untested, so sabotage of those P1/R2 branches would survive",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_accounts.py:21-24 only tests amount=11 vs balance 10",
+        "accounts.py:13 condition unchanged from baseline"
+      ],
+      "failure_mechanism": "sabotage of `amount <= 0` -> no test fails",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: accounts.py:13-14 verified correct by reading and unchanged by the diff; send at :16 is unreachable on that path"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "if notifier.send raises, the balance is already decremented and the caller sees an exception for a committed withdrawal",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "accounts.py:15 decrement precedes accounts.py:16 send"
+      ],
+      "failure_mechanism": "send raises -> exception propagates after balance -= amount -> caller sees failure for an applied withdrawal",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "contract specifies no notifier-failure semantics; not traceable to R1/R2/I1/P1, so not a contract defect (recorded as ambiguity, not finding)"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "regression (reviewer-claim.md)",
+      "note": "lock held across network call in withdraw (accounts.py)",
+      "disposition": "adjudicated",
+      "finding_id": "invariants-1"
+    },
+    {
+      "reviewer": "tests",
+      "note": "accounts.py calls notifier.send while holding the lock, violating I1",
+      "disposition": "adjudicated",
+      "finding_id": "invariants-1"
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "unhandled exception from send() leaves balance already decremented",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "exactly-once/retry semantics when send() fails; lock-scope restructuring choice",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "no test asserts A3/I1 (lock not held during notifier.send); the passing suite cannot distinguish compliant from non-compliant lock scope (test_accounts.py:6-10)"
+    }
+  ],
+  "verified_state": {
+    "head": "09845a8de69e341328edc9e1b8493d567a5efd7d",
+    "files": {
+      "accounts.py": "91df376b9d07ae1193ae8f6eab694a00c4b12d42",
+      "test_accounts.py": "ae935ccf805bd99c1972603cb2221ceb23857048"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Move notifier.send(account.account_id, amount) outside the `with account.lock:` block (capture the new balance under the lock, send after release) and add a test whose notifier asserts the lock is not held during send; then re-check with acceptance, tests, and invariants against head 09845a8 / accounts.py 91df376b, test_accounts.py ae935ccf. The change must not be committed, pushed, or described as verified until a re-check passes."
+}

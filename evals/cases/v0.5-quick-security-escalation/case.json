@@ -1,0 +1,16 @@
+{
+  "id": "v0.5-quick-security-escalation",
+  "title": "Quick mode escalates to panel when the security trigger fires on a low-risk change",
+  "mode": "quick",
+  "task": "Validate client-supplied filenames in upload_path(filename) in uploads.py. Filenames arrive from HTTP clients; the server runs on POSIX. R1: raise ValueError when filename is empty, is . or .., or contains /, a backslash, or a NUL character. R2: otherwise return UPLOAD_DIR / filename unchanged. Risk: low; uploads land in a scratch directory that is wiped hourly.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "effective_mode": "panel",
+    "required_reviewers": [
+      "acceptance",
+      "tests",
+      "security"
+    ]
+  }
+}

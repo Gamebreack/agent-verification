@@ -1,0 +1,204 @@
+{
+  "case_id": "v0.5-branch-commits",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "branch feature against merge base 56decc9 (local main; origin/HEAD not a symbolic ref) plus working tree: commit 1529eef (paginate.py, test_paginate.py) and uncommitted changes to labels.py, test_labels.py",
+  "scope": {
+    "covered": [
+      "paginate.py (new, commit 1529eef)",
+      "test_paginate.py (new, commit 1529eef)",
+      "labels.py (working-tree modification)",
+      "test_labels.py (working-tree modification)"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff against 56decc9",
+      "untracked .verify-eval/ (excluded via .git/info/exclude; it is the contract, not part of the change)",
+      "paginate behavior for page < 1 or page_size <= 0 (not defined by the contract)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-branch-commits/repo/.verify-eval/task.md",
+    "source_hash": "89f93cee9f7de5457903064b9e1bbe86c999832a",
+    "requirements": [
+      "R1: paginate(items, page, page_size) in paginate.py returns the items of 1-based page number page, that is items[(page - 1) * page_size : page * page_size]; page 1 is the first page.",
+      "R2: plural_label(count, noun) in labels.py returns \"1 <noun>\" for count 1 and \"<count> <noun>s\" otherwise."
+    ],
+    "risks": [
+      "paginate.py: medium \u2014 new pure function with no in-repo callers; an off-by-one page offset silently returns wrong data to any caller",
+      "labels.py: low \u2014 pure string formatting with no in-repo callers beyond tests"
+    ],
+    "invariants": [
+      "I1: paginate page 1 starts at index 0 (1-based page offset (page-1)*page_size)"
+    ],
+    "preserved_behaviors": [
+      "P1: plural_label(count, noun) for count != 1 still returns \"<count> <noun>s\""
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "paginate(items, page, page_size) in paginate.py returns the items of 1-based page number page, that is items[(page - 1) * page_size : page * page_size]; page 1 is the first page.",
+      "result": "FAIL",
+      "evidence": "paginate.py:2 `start = page * page_size` (0-based); lead ran python3 -B -c paginate(list(range(30)),1,10) -> [10, 11, ..., 19], expected [0..9]"
+    },
+    {
+      "id": "R2",
+      "text": "plural_label(count, noun) in labels.py returns \"1 <noun>\" for count 1 and \"<count> <noun>s\" otherwise.",
+      "result": "PASS",
+      "evidence": "labels.py:2-4; test_labels.py:8,11 pass; lead probe: p(1)='1 item', p(0)='0 items', p(2)='2 items'"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -B -m unittest -v",
+      "result": "Ran 3 tests, OK (test_many, test_one, test_full_page_has_page_size_items)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c \"from paginate import paginate; print(paginate(list(range(30)),1,10)); from labels import plural_label as p; print(p(1,'item'),'|',p(0,'item'),'|',p(2,'item'))\"",
+      "result": "[10, 11, 12, 13, 14, 15, 16, 17, 18, 19] and '1 item | 0 items | 2 items'",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff 56decc9; read paginate.py, test_paginate.py, labels.py, test_labels.py",
+      "result": "paginate.py:2 uses page * page_size; test_paginate.py:8 asserts only len == 10",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "read of target files against R1/R2",
+      "result": "R1 fails at paginate.py:2; R2 satisfied",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "static sabotage analysis of test_paginate.py and test_labels.py",
+      "result": "0-based offset survives test_paginate.py:8; plural_label(1) sabotage is caught by test_labels.py:11",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation testing",
+      "reason": "no mutation tooling configured; sabotage reasoned statically by the tests reviewer"
+    },
+    {
+      "check": "regression, invariants, and security reviewers",
+      "reason": "not triggered: new pure function and pure formatter with no in-repo consumers, persisted state, or trust boundary; the page-boundary rule is the requested behavior R1 itself and acceptance covers it"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "paginate() uses a 0-based page offset, so paginate(list(range(30)),1,10) returns [10..19] instead of the first page [0..9].",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "paginate.py:2 `start = page * page_size` (contract requires (page - 1) * page_size)",
+        "paginate.py:3 `return items[start : start + page_size]`",
+        "lead: paginate(list(range(30)),1,10) -> [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]",
+        "test_paginate.py:8 asserts only len(...) == 10, so it passes against the broken offset (merged from acceptance-2 and tests-1)"
+      ],
+      "failure_mechanism": "caller requests page 1 -> items[10:20] is returned -> the first page is unreachable, every page N returns page N+1's data, and the last page is empty",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The only paginate test checks length, not contents, so it passes while R1 is broken.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_paginate.py:8"
+      ],
+      "failure_mechanism": "off-by-one code -> length still 10 -> test passes",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate symptom of acceptance-1; its evidence was merged there",
+      "rejection_reason": "duplicate of acceptance-1 (a test that cannot fail while R1 is broken is merged with the code defect)"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "test_paginate.py asserts only the result length, so a 0-based paginate passes; the shipped paginate.py is 0-based.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_paginate.py:8",
+        "paginate.py:2",
+        "lead run: test_full_page_has_page_size_items OK"
+      ],
+      "failure_mechanism": "paginate returns items[10:20] for page 1 -> length 10 -> test passes -> defect ships green",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1; its evidence was merged there and the absent content-asserting test is recorded as a MISSING evidence gap",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause, paginate.py:2)"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers plural_label(0, ...), so a count <= 1 mutation would survive.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_labels.py:8",
+        "test_labels.py:11",
+        "labels.py:2"
+      ],
+      "failure_mechanism": "mutate to count <= 1 -> plural_label(0) returns '1 item' -> uncaught",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: labels.py:2 uses count == 1, and the lead probe returned '0 items' for count 0"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "paginate.py:2 fails R1 as an implementation bug, not only a test gap",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    },
+    {
+      "reviewer": "acceptance",
+      "note": "Did not evaluate page < 1 or page_size <= 0 handling; the contract does not define it",
+      "disposition": "open_lead",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "E1: no test asserts paginate's page contents (for example page 1 == items[0:10]); test_paginate.py:8 checks only length, so the wrong-page defect in acceptance-1 passes the suite"
+    }
+  ],
+  "verified_state": {
+    "head": "1529eef3f25e9eb84dc588ad3928a117770bac60",
+    "files": {
+      "labels.py": "e298c9cb3ae80e54fdb477fbffc84583c85126ba",
+      "paginate.py": "f934009a3dcaddc72c2788ba08dc9d2f5c564175",
+      "test_labels.py": "dd9314185cb7ce131dd94fdcd6e2e3abaf2b4c10",
+      "test_paginate.py": "3c2da0e4ccfbca864cb9a812950c65fabea47047"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Fix paginate.py:2 to use a (page - 1) * page_size offset and add a test that asserts page contents (page 1 == items[0:10], plus a later page). Then run a re-check with acceptance and tests against verified_state head 1529eef3f25e9eb84dc588ad3928a117770bac60 and the recorded file hashes. Do not commit, push, or describe this change as verified until a re-check passes."
+}

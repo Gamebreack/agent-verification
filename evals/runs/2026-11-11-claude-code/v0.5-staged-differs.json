@@ -1,0 +1,157 @@
+{
+  "case_id": "v0.5-staged-differs",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff against HEAD 32c0e08 (slug.py, test_slug.py)",
+  "scope": {
+    "covered": [
+      "working-tree content of slug.py and test_slug.py vs HEAD 32c0e08"
+    ],
+    "not_covered": [
+      "staged (index) content: the staged slug.py differs from the working tree (it uses [^a-z]+ and drops digits), and the staged version was not reviewed",
+      "pre-existing code outside the diff"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-staged-differs/repo/.verify-eval/task.md",
+    "source_hash": "4578adcf81d1c4a01138bd29dcb90954a13a5bc3",
+    "requirements": [
+      "R1: lowercase the title, keep ASCII letters and digits, replace each run of any other characters with a single hyphen, and strip leading and trailing hyphens. Example: \"  Release 2.0 Notes! \" becomes \"release-2-0-notes\"."
+    ],
+    "risks": [
+      "slug.py slugify: low (pure function, no consumers in repo)",
+      "test_slug.py: low"
+    ],
+    "invariants": [
+      "I1: output contains only [a-z0-9-], with no consecutive hyphens and no leading or trailing hyphen"
+    ],
+    "preserved_behaviors": [
+      "P1: slugify(\" Hello World \") == \"hello-world\""
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "slugify lowercases the title, keeps ASCII letters and digits, replaces each run of any other characters with a single hyphen, and strips leading and trailing hyphens; slugify(\"  Release 2.0 Notes! \") == \"release-2-0-notes\"",
+      "result": "PASS",
+      "evidence": "slug.py:5 re.sub(r\"[^a-z0-9]+\", \"-\", title.lower()).strip(\"-\"); test_slug.py:10-11 passes under python3 -m unittest -v test_slug; lead probe: 'a--b__c'->'a-b-c', '--x--'->'x', '!!!'->'', 'Caf\u00e9 au lait'->'caf-au-lait'"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline",
+    "tests": "quick-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_slug",
+      "result": "Ran 2 tests, OK (test_simple_title, test_keeps_digits_and_collapses_separators)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "ad-hoc slugify probe on the R1 example, empty input, punctuation-only input, uppercase plus digits, repeated separators, non-ASCII, and whitespace control characters",
+      "result": "all outputs match R1 and I1, e.g. '  Release 2.0 Notes! '->'release-2-0-notes', 'ABC123'->'abc123', 'tab\\tnew\\nline'->'tab-new-line'",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff --cached / git diff / git show :slug.py",
+      "result": "staged slug.py uses [^a-z]+; working tree uses [^a-z0-9]+; test_slug.py change is unstaged",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_slug",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "sabotage mutations in a temp copy (drop digits, drop +, drop strip, lstrip only, drop lower, [\\W_]+, \\W+, baseline implementation)",
+      "result": "drop digits, strip, lower, and baseline mutations were caught; drop '+', [\\W_]+ and \\W+ survived",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "read slug.py:1-5 and test_slug.py:1-15 against R1",
+      "result": "implementation matches every R1 clause",
+      "execution": "static",
+      "run_by": "acceptance"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test exercises a multi-character interior separator run, so removing run-collapsing (dropping '+') does not fail any test.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "test_slug.py:10 interior runs are all single characters",
+        "mutation [^a-z0-9] (no +) in a temp copy: tests OK"
+      ],
+      "failure_mechanism": "future removal of '+' -> slugify('a  b') returns 'a--b' -> suite stays green",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: the lead verified collapsing correct by reading slug.py:5 and by the 'a--b__c'->'a-b-c' probe; required evidence E1 (the R1 example test) is present",
+      "rejection_reason": "test-strength on correct code"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test input contains a non-ASCII letter or underscore, so widening the kept characters beyond ASCII does not fail any test.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "mutations [\\W_]+ and \\W+ in a temp copy: tests OK",
+        "current behavior is correct: slugify('caf\u00e9')=='caf', slugify('a__b')=='a-b'"
+      ],
+      "failure_mechanism": "future switch to a \\w-based class -> slugify('caf\u00e9') returns 'caf\u00e9' -> suite stays green",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code: the lead verified ASCII-only behavior correct by probe ('Caf\u00e9 au lait'->'caf-au-lait')",
+      "rejection_reason": "test-strength on correct code"
+    },
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "Staged slug.py ([^a-z]+) differs from the working tree and drops digits, so committing the index as-is would ship a version that fails the R1 example.",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "git show :slug.py -> re.sub(r\"[^a-z]+\", ...)",
+        "git status: MM slug.py, ' M' test_slug.py"
+      ],
+      "failure_mechanism": "commit of the index without re-staging -> committed slugify('Release 2.0') gives 'release' with digits dropped -> R1 violated in the commit",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": null,
+      "rejection_reason": "the index is outside the verified target (working tree); recorded in the Scope, and the post-commit blob match against verified_state guards it: a commit whose slug.py blob is not 4ed91f3b must not be described as verified"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "Index differs from working tree: staged slug.py uses [^a-z]+ and would fail E1 if committed without re-staging.",
+      "disposition": "adjudicated",
+      "finding_id": "lead-1"
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "32c0e08299bb3759f14523f43595db775b67b083",
+    "files": {
+      "slug.py": "4ed91f3beaf5c1a65c8c9e733fbd99e75c23db31",
+      "test_slug.py": "63408bde4756159499366f5691d94bb90e2ddb66"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required for the working tree. Before committing, stage the working-tree content (slug.py and test_slug.py) so the committed blobs match verified_state; the current index holds an unverified slug.py that drops digits."
+}

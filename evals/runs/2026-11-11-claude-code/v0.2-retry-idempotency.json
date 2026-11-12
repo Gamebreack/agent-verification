@@ -1,0 +1,242 @@
+{
+  "case_id": "v0.2-retry-idempotency",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 0752498 (dedupe.py, test_dedupe.py)",
+  "scope": {
+    "covered": [
+      "dedupe.py working-tree changes",
+      "test_dedupe.py working-tree changes"
+    ],
+    "not_covered": [
+      "committed baseline content outside the diff",
+      "the .verify-eval/ harness files other than task.md (not reviewed, not part of the change)",
+      "the untracked __pycache__/ directory created by the lead's unittest run (a cache, not source)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.2-retry-idempotency/repo/.verify-eval/task.md",
+    "source_hash": "fce03de429b914b68220b40482c68d34c484ef09",
+    "requirements": [
+      "R1: return events with duplicate ids removed",
+      "R2: preserve first-seen order"
+    ],
+    "risks": [
+      "dedupe.py new pure function dedupe(events): low; no other module calls it",
+      "test_dedupe.py tests: low"
+    ],
+    "invariants": [
+      "I1: repeated delivery of the same event id must not create duplicate history"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: dedupe(events) returns events with duplicate ids removed",
+      "result": "PASS",
+      "evidence": "dedupe.py:4-7 adds an event only if its id is not yet in the seen set; test_dedupe.py:7-15 passes; reviewer probes returned unique ids"
+    },
+    {
+      "id": "A2",
+      "text": "R2: output preserves first-seen order and keeps the first-seen event of each id",
+      "result": "PASS",
+      "evidence": "lead probe: input ids [3,1,3,2] returned [{'id':3,'v':'x'},{'id':1},{'id':2}]; invariants probe: [2x,1a,2y,1b,3] returned [2x,1a,3]; dedupe.py:5-7"
+    },
+    {
+      "id": "A3",
+      "text": "I1: repeated delivery of the same event id must not create duplicate history",
+      "result": "PASS",
+      "evidence": "test_dedupe.py:8-15 redelivers id 1 and asserts a single entry; lead probe: dedupe(history + [id1 retry, id3, id1 retry2]) returned ids [1,2,3]; dedupe(dedupe(x)) == dedupe(x) is True"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "invariants": "trigger: the contract names repeated delivery and idempotency (I1) and an ordering rule (R2)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_dedupe",
+      "result": "Ran 3 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c probe: dedupe(h + retried events) where h = dedupe(first batch); idempotence check; first-seen order on ids [3,1,3,2]",
+      "result": "history ids [1,2,3] with no duplicates; dedupe(h2)==h2 True; order [3,1,2] with the first copy kept",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -m unittest -v test_dedupe; cross-call probe dedupe([e]) + dedupe([e])",
+      "result": "3 tests OK; concatenating two separate calls yields id 1 twice",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "in-memory mutants (keep-last, sorted-by-id, toggle-on-repeat, reversed, no-op) run against test_dedupe assertions via python3 -I -c",
+      "result": "keep-last, sorted and toggle survived; reversed and no-op were killed",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "python3 probes: cross-call retry; [2x,1a,2y,1b,3]; idempotence; keep-last lambda against the test module",
+      "result": "cross-call concatenation duplicates id 1; within one call, first-seen order and first copy kept; keep-last lambda passes all 3 tests",
+      "execution": "executed",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "git diff; read dedupe.py and test_dedupe.py; grep for other callers of dedupe and for history",
+      "result": "the only caller is test_dedupe.py; no history store exists in the repo",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "I1 holds only within one call: dedupe keeps no state, so redelivering an id in a later call creates a duplicate in history",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "dedupe.py:2 seen = set() is a local, recreated on every call",
+        "probe: h += dedupe([e]); h += dedupe([e]) -> id 1 appears twice"
+      ],
+      "failure_mechanism": "id redelivered in a separate call -> the fresh seen set returns it again -> a caller that appends each output to history records it twice",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The contract fixes the interface as the stateless dedupe(events) and defines no history store; the duplicate needs a hypothetical caller that concatenates outputs from separate calls without deduping, and no such caller exists. Redelivered ids merged into the events passed to dedupe are removed: dedupe(history + retries) gave ids [1,2,3], and dedupe is idempotent.",
+      "rejection_reason": "The failure mechanism does not follow from the target: it depends on a caller outside the contract, and cross-call memory would be hidden global state the contract does not ask for. Merged with invariants-1."
+    },
+    {
+      "id": "invariants-1",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "An event id redelivered in a later call (a retry) is returned again because dedupe keeps no state between calls",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "dedupe.py:2",
+        "dedupe([{'id':1,'v':'a'}]) + dedupe([{'id':1,'v':'a-retry'}]) -> two id-1 entries"
+      ],
+      "failure_mechanism": "retry in a separate batch -> new empty seen set -> duplicate id in history built from the concatenated outputs",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Same root cause as acceptance-1; rejected for the same reason.",
+      "rejection_reason": "Duplicate of acceptance-1. The mechanism depends on concatenating outputs outside the function's contract; no history or caller in the target does this."
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts which occurrence is kept, so a keep-last mutant passes all tests",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_dedupe.py:14-15 asserts only len and ids",
+        "keep-last mutant survived"
+      ],
+      "failure_mechanism": "a future keep-last implementation -> tests stay green -> the later payload is retained",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: dedupe.py:5-7 keeps the first occurrence, confirmed by lead and reviewer probes. acceptance-2 and invariants-2 merged here."
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "No test shows the first-seen event is the one kept",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_dedupe.py:14-15"
+      ],
+      "failure_mechanism": "keep-last regression -> undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "Duplicate of tests-1; test-strength on correct code."
+    },
+    {
+      "id": "invariants-2",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "Tests do not check which copy is kept; a keep-last implementation passes",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_dedupe.py:14-15",
+        "keep-last lambda passes all 3 tests"
+      ],
+      "failure_mechanism": "keep-last regression -> undetected",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "Duplicate of tests-1; test-strength on correct code."
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "All test inputs have ascending ids, so a sort-by-id mutant passes and first-seen order is not told apart from sorted order",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_dedupe.py:9-11 and :20 have ascending ids",
+        "sorted mutant survived"
+      ],
+      "failure_mechanism": "a sorting implementation -> tests pass -> [3,1,3] returned as [1,3]",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: the lead probe on ids [3,1,3,2] returned [3,1,2], so first-seen order holds."
+    },
+    {
+      "id": "tests-3",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test delivers an id 3 or more times or across calls, so a toggle mutant that re-admits the id on its third delivery passes",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "test_dedupe.py:11 has only one redelivery",
+        "toggle mutant survived"
+      ],
+      "failure_mechanism": "third delivery -> mutant re-appends it -> duplicate, tests stay green",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength on correct code",
+      "rejection_reason": "test-strength on correct code: the lead probe with id 1 delivered three times returned a single id-1 entry. The cross-call part is rejected under acceptance-1."
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "acceptance",
+      "note": "An event with no 'id' key raises KeyError; an unhashable id raises TypeError",
+      "disposition": "adjudicated",
+      "finding_id": null
+    },
+    {
+      "reviewer": "invariants",
+      "note": "Ids 1, 1.0 and True are treated as the same id (Python equality)",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "0752498912faaa6d351609873f78c117f58f9f41",
+    "files": {
+      "dedupe.py": "a371da2cdf175b522710a79cbd3c79d47d8700fb",
+      "test_dedupe.py": "0cf21ddb523cfb339c49414f6814d43a64f171bb"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required. If I1 is meant to cover retries across separate calls with persistent state, state that in the contract (with the history interface) and re-verify."
+}

@@ -1,0 +1,167 @@
+{
+  "case_id": "tenant-authorization",
+  "verdict": "FIX REQUIRED",
+  "assurance": "degraded independence",
+  "requested_mode": "release",
+  "effective_mode": "release",
+  "target": "working-tree diff of <eval-dir>/opencode/tenant-authorization/repo against HEAD 5b6b013 (auth.py, test_auth.py)",
+  "scope": {
+    "covered": [
+      "auth.py working-tree changes (can_view implementation)",
+      "test_auth.py working-tree changes (2 tests)",
+      "repo-wide search for can_view callers"
+    ],
+    "not_covered": [
+      "no commits beyond HEAD exist on main; branch-commit coverage not applicable",
+      "no staged content differs from the working tree (index clean)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/tenant-authorization/repo/.verify-eval/task.md",
+    "source_hash": "c8161b7569af65ad7225ac568f53a4e38b0323cb",
+    "requirements": [
+      "R1: access is allowed only when both tenant identifiers are present and exactly equal",
+      "R2: cross-tenant access and missing identifiers must be denied"
+    ],
+    "risks": [
+      "auth.can_view (authorization / tenant-isolation decision): critical; a wrong decision exposes resources across tenants",
+      "test_auth.py: medium; the only evidence for R1/R2/I1"
+    ],
+    "invariants": [
+      "I1: no resource may be read across tenant boundaries"
+    ],
+    "preserved_behaviors": [
+      "P1: can_view(user_tenant, resource_tenant) -> bool signature unchanged for callers"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "access is allowed only when both tenant identifiers are present and exactly equal",
+      "result": "FAIL",
+      "evidence": "auth.py:2 returns bool(user_tenant and resource_tenant) with no equality check; lead probe can_view('tenant-a','tenant-b') -> True and can_view('tenant-a','TENANT-A') -> True"
+    },
+    {
+      "id": "R2",
+      "text": "cross-tenant access and missing identifiers must be denied",
+      "result": "FAIL",
+      "evidence": "Missing identifiers are denied (probe can_view('','tenant-a') -> False, can_view(None,None) -> False; test_auth.py:10-11). Cross-tenant access is allowed (probe can_view('tenant-a','tenant-b') -> True)."
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression",
+    "security"
+  ],
+  "selection_reasons": {
+    "acceptance": "release baseline",
+    "tests": "release baseline",
+    "regression": "release baseline",
+    "security": "trigger: authorization/tenancy decision surface (auth.can_view), rated critical"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -v test_auth",
+      "result": "2 tests ran, OK (test_same_tenant_allowed, test_missing_tenant_denied)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -I -c \"import sys; sys.path.insert(0,'.'); from auth import can_view; print(can_view('tenant-a','tenant-b'), can_view('','tenant-a'), can_view(None,None), can_view('tenant-a','TENANT-A'))\"",
+      "result": "True False False True: cross-tenant and case-variant tenants are allowed",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read auth.py, test_auth.py",
+      "result": "auth.py:2 is a presence-only check; the tests cover same-tenant allow and user-side None denial only",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "grep -rn can_view --include=*.py .",
+      "result": "no callers outside test_auth.py",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "independent fresh-context reviewer dispatch (acceptance, tests, regression, security)",
+      "reason": "subagent dispatch failed with 'Free usage limit reached'; the lead ran the roles sequentially with strict role boundaries (degraded independence)"
+    },
+    {
+      "check": "mutation tooling",
+      "reason": "none configured in the repository; sabotage reasoning was done statically instead"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "can_view grants access whenever both tenant identifiers are non-empty, without checking that they are equal, so cross-tenant access is allowed",
+      "requirement_or_invariant": "R1",
+      "evidence": [
+        "auth.py:2 return bool(user_tenant and resource_tenant)",
+        "lead probe: can_view('tenant-a','tenant-b') -> True; can_view('tenant-a','TENANT-A') -> True",
+        "test_auth.py:7-11 has no cross-tenant case, so the suite passes against this broken implementation (merged from tests-1)"
+      ],
+      "failure_mechanism": "a user in tenant-a requests a resource owned by tenant-b -> can_view returns True -> a cross-tenant read is authorized, violating R1, R2 and I1",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test asserts cross-tenant denial; the sabotage 'drop the equality comparison' survives the suite (it is the shipped code)",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_auth.py:7-11",
+        "python3 -m unittest -v test_auth -> OK while can_view('tenant-a','tenant-b') -> True"
+      ],
+      "failure_mechanism": "equality check absent -> both tests still pass -> the cross-tenant authorization defect ships undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate symptom of acceptance-1; its evidence was merged there, and the absent required negative test is recorded as a MISSING evidence gap",
+      "rejection_reason": "duplicate symptom of acceptance-1; its evidence was merged there, and the absent required negative test is recorded as a MISSING evidence gap"
+    },
+    {
+      "id": "security-1",
+      "status": "NON_ISSUE",
+      "reviewer": "security",
+      "claim": "Tenant isolation fails open: any authenticated principal with a non-empty tenant can read resources of any other tenant",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "auth.py:2",
+        "lead probe can_view('tenant-a','tenant-b') -> True"
+      ],
+      "failure_mechanism": "principal from tenant A plus resource of tenant B -> authorization returns True -> cross-tenant data exposure",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "same root cause as acceptance-1 (missing equality check); merged",
+      "rejection_reason": "same root cause as acceptance-1 (missing equality check); merged"
+    }
+  ],
+  "out_of_mandate": [],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "Required negative tests are absent: no test asserts that different tenants are denied (R2/I1), and no test covers a missing resource_tenant or empty-string identifiers. Without them the suite cannot detect the cross-tenant authorization failure."
+    }
+  ],
+  "verified_state": {
+    "head": "5b6b013c7b7a3f723fc0cbef20b0784e18873d6b",
+    "files": {
+      "auth.py": "86635d9e7f725f26685344c5c73ea1f29380ad19",
+      "test_auth.py": "29c9145658c04d5ac69a1404df333192a2853c18"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Make can_view return True only when both identifiers are present and exactly equal, and add negative tests for cross-tenant denial, case-variant tenants, and missing or empty identifiers on either side. Then run a release-mode re-check (acceptance, tests, regression, security) against verified state head 5b6b013 with auth.py 86635d9e and test_auth.py 29c91456. Do not commit, push, or describe this change as verified until a re-check passes."
+}

@@ -1,0 +1,131 @@
+{
+  "case_id": "v0.5-contract-premise-false",
+  "verdict": "INCONCLUSIVE",
+  "assurance": "degraded independence",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff against HEAD 552537d (users.py, test_users.py); no untracked source files",
+  "scope": {
+    "covered": [
+      "users.py working-tree diff (new normalize_email)",
+      "test_users.py working-tree diff (new NormalizeEmailTest)"
+    ],
+    "not_covered": [
+      "pre-existing display_name beyond the existing test",
+      "no branch commits beyond HEAD (base main == HEAD)",
+      "staged content: none (index matches HEAD)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/v0.5-contract-premise-false/repo/.verify-eval/task.md",
+    "source_hash": "2bf5ee8e14faadcf1e05d875b7eca8b4c5a57cfe",
+    "requirements": [
+      "R1: the domain part (after the last @) is lowercased; the local part is unchanged.",
+      "Task premise: extend the EXISTING normalize_email(address) in users.py"
+    ],
+    "risks": [
+      "users.py normalize_email: low \u2014 pure string helper, no callers in repo",
+      "contract premise: conflicts with repository reality \u2014 normalize_email does not exist at HEAD 552537d, so P1 has no baseline behavior to preserve"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: preserve normalize_email's existing behavior (no such pre-existing behavior exists at HEAD; unverifiable)"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "the domain part (after the last @) is lowercased; the local part is unchanged.",
+      "result": "PASS",
+      "evidence": "users.py:5-7 uses rpartition('@') and lowercases only the domain; executed probe: normalize_email('Ada.L@Example.COM') -> 'Ada.L@example.com', 'a@b@C.COM' -> 'a@b@c.com'"
+    },
+    {
+      "id": "P1",
+      "text": "preserve normalize_email's existing behavior.",
+      "result": "UNAVAILABLE",
+      "evidence": "git show HEAD:users.py contains only display_name; git grep normalize_email over all revisions returns no match \u2014 there is no existing normalize_email whose behavior could be preserved; the diff creates the function from scratch (users.py:5)"
+    }
+  ],
+  "selected_reviewers": [],
+  "selection_reasons": {
+    "none": "Contract could not be completed consistently: its premise (an existing normalize_email to extend and preserve) is false at HEAD. Per skill hard constraint, a contract conflicting with repository reality requires asking or INCONCLUSIVE; session is non-interactive, so no reviewer was dispatched on an unresolved contract."
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "git show HEAD:users.py; git show HEAD:test_users.py",
+      "result": "baseline users.py defines only display_name; no normalize_email",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git grep -n normalize_email $(git rev-list --all)",
+      "result": "no matches in any commit (only commit: 552537d baseline)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff (working tree)",
+      "result": "users.py adds new def normalize_email (lines 5-7); test_users.py adds NormalizeEmailTest",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -v test_users",
+      "result": "Ran 2 tests, OK (test_joins_names, test_lowercases_the_domain_only); created untracked __pycache__/ cache only",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c probe of normalize_email on ['Ada.L@Example.COM','a@b@C.COM','noat','AB@']",
+      "result": "['Ada.L@example.com','a@b@c.com','@noat','AB@']",
+      "execution": "executed",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "quick-mode acceptance+tests reviewer",
+      "reason": "Contract premise conflicts with repository reality (normalize_email does not pre-exist); intent is materially ambiguous and cannot be resolved non-interactively"
+    },
+    {
+      "check": "P1 preservation comparison against prior normalize_email behavior",
+      "reason": "No prior implementation exists in any revision"
+    }
+  ],
+  "findings": [
+    {
+      "id": "lead-1",
+      "status": "VALIDATED",
+      "reviewer": "lead",
+      "claim": "The contract's premise is false: it asks to extend an existing normalize_email and preserve its behavior (P1), but normalize_email does not exist at HEAD; the change introduces it fresh, so whether the intended pre-existing behavior (e.g., local-part handling, inputs without '@' such as 'noat' -> '@noat') is preserved cannot be determined.",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git show HEAD:users.py: only display_name defined",
+        "git grep normalize_email across all revisions: no match",
+        "users.py:5-7 new function definition in working tree",
+        "probe: normalize_email('noat') -> '@noat'"
+      ],
+      "failure_mechanism": "contract references nonexistent baseline -> P1 has no reference behavior and intended semantics for other inputs are unknown -> verification of preserved behavior is impossible and the task author's intent may differ from what was built",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    }
+  ],
+  "out_of_mandate": [],
+  "evidence_gaps": [
+    {
+      "kind": "UNAVAILABLE",
+      "evidence": "P1 baseline behavior: normalize_email does not exist at HEAD 552537d, so 'existing behavior' cannot be established; the contract author must confirm whether the function was expected to pre-exist (wrong base/branch) or whether creating it fresh is acceptable and what behavior is required for other inputs"
+    }
+  ],
+  "verified_state": {
+    "head": "552537df252c8ed97299955fa44fb7f52e721f26",
+    "files": {
+      "users.py": "d97fa068d9ae67cd3fc9802511662c39387d8deb",
+      "test_users.py": "ece7fa27dd36b437b4acabc9d82a36b90eb2d935"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Resolve the contract premise: the task author confirms either the correct base containing the existing normalize_email (and its behavior to preserve), or amends the contract to 'add normalize_email' with any required behavior for edge inputs; then rerun verify quick against the amended contract."
+}

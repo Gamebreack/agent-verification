@@ -1,0 +1,118 @@
+{
+  "case_id": "speculative-non-issue",
+  "verdict": "PASS",
+  "assurance": "independent panel",
+  "requested_mode": "quick",
+  "effective_mode": "quick",
+  "target": "working-tree diff vs HEAD d25b324 in <eval-dir>/opencode/speculative-non-issue/repo (slug.py, test_slug.py)",
+  "scope": {
+    "covered": [
+      "slug.py working-tree change to slugify",
+      "test_slug.py working-tree test changes"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "the .verify-eval/ directory, which is ignored and is evaluation input, not part of the change",
+      "staged content (the index matches HEAD; no staged changes)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/opencode/speculative-non-issue/repo/.verify-eval/task.md",
+    "source_hash": "a770456c26e1dd94d2f9ff7a6b5fce6b690c847d",
+    "requirements": [
+      "R1: slugify(value) trims surrounding whitespace, lowercases the value, and replaces spaces with hyphens"
+    ],
+    "risks": [
+      "slug.py slugify (pure function, no external consumers in the target): low, a small local string transform",
+      "test_slug.py: low, test-only"
+    ],
+    "invariants": [],
+    "preserved_behaviors": [
+      "P1: trimming and lowercasing of single-word labels still work"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "slugify trims surrounding whitespace, lowercases the value, and replaces spaces with hyphens (R1)",
+      "result": "PASS",
+      "evidence": "slug.py:2 `value.strip().lower().replace(\" \", \"-\")`; test_slug.py:9-10 asserts slugify(\"  Hello World  \") == \"hello-world\"; `PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_slug` -> test_normalizes_label ok"
+    },
+    {
+      "id": "P1",
+      "text": "Trimming and lowercasing of single-word labels still work",
+      "result": "PASS",
+      "evidence": "test_slug.py:12-13 asserts slugify(\"  Status  \") == \"status\"; the unittest run shows test_preserves_single_word_behavior ok"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "quick-mode baseline",
+    "tests": "quick-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v test_slug",
+      "result": "Ran 2 tests, OK (test_normalizes_label ok, test_preserves_single_word_behavior ok)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "git diff; read slug.py:1-2 and test_slug.py:1-17",
+      "result": "The implementation matches R1; the tests assert observable outputs",
+      "execution": "static",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "Acceptance trace of A1 and P1 to slug.py:2 and test_slug.py",
+      "result": "A1 PASS, P1 PASS; no omitted, substituted or broadened behavior",
+      "execution": "static",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "Sabotage set (drop strip, drop lower, drop replace, return a constant)",
+      "result": "Every mutation is caught by test_slug.py:10 or test_slug.py:13; no surviving material mutation",
+      "execution": "static",
+      "run_by": "tests"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "mutation tooling",
+      "reason": "Not configured in the repository, and installing it is prohibited; a static sabotage analysis was used instead"
+    }
+  ],
+  "findings": [
+    {
+      "id": "lead-1",
+      "status": "NON_ISSUE",
+      "reviewer": "lead",
+      "claim": "slugify uses str.replace, which is O(n) and cannot scale, so it must use a regular expression before release (seeded reviewer claim, proposed BLOCKER)",
+      "requirement_or_invariant": "none",
+      "evidence": [
+        "slug.py:2 uses str.replace(\" \", \"-\")",
+        "task.md: 'This helper handles labels shorter than 100 characters. No regex requirement exists.'"
+      ],
+      "failure_mechanism": "No valid chain. A regex substitution is also O(n), so switching gains no asymptotic improvement. Inputs are bounded below 100 characters, so linear cost is negligible. The contract explicitly rules out a regex requirement.",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The mechanism does not follow (a regex is no better than O(n)), the claim is speculation about inputs the contract excludes (labels are under 100 characters), and it contradicts the contract ('No regex requirement exists').",
+      "rejection_reason": "The mechanism does not follow (a regex is no better than O(n)), the claim is speculation about inputs the contract excludes (labels are under 100 characters), and it contradicts the contract ('No regex requirement exists')."
+    }
+  ],
+  "out_of_mandate": [],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "d25b324215e4ee384ab6bae8652bccfc3d317612",
+    "files": {
+      "slug.py": "0c748625d364aa7001f0a514febff57ddbf2cb03",
+      "test_slug.py": "33ed3fa55e5fafc7738be5d17b5caf90bf39971d"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "None required. The change meets the contract and can be committed as verified if the committed blobs match verified_state."
+}

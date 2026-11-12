@@ -11,7 +11,7 @@
     "findings": [
       {
         "name": "omitted-last-name",
-        "requirement_or_invariant": ["R2"],
+        "requirement_or_invariant": ["R1", "R2"],
         "severities": ["BLOCKER", "SHOULD_FIX"],
         "evidence_paths": ["profile.py"],
         "terms_any": ["last name", "last_name", "both names"]

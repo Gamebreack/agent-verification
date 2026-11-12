@@ -1,0 +1,146 @@
+{
+  "id": "v0.5-recheck-unfixed-outside-delta",
+  "title": "Re-check re-confirms a prior finding whose file the fix never touched",
+  "mode": "panel",
+  "task": "Add a page-size limit. R1: is_valid_page_size(size) in limits.py returns True exactly when 1 <= size <= MAX_PAGE_SIZE, with MAX_PAGE_SIZE = 100 from config.py. I1: the limit is inclusive: MAX_PAGE_SIZE itself is a valid page size. P1: DEFAULT_PAGE_SIZE in config.py stays 25; existing clients rely on it.",
+  "previous": "previous",
+  "prior_report": {
+    "case_id": null,
+    "verdict": "FIX REQUIRED",
+    "assurance": "independent panel",
+    "requested_mode": "panel",
+    "effective_mode": "panel",
+    "target": "working-tree diff",
+    "scope": {
+      "covered": [
+        "config.py",
+        "limits.py",
+        "test_config.py",
+        "test_limits.py"
+      ],
+      "not_covered": [
+        "pre-existing code outside the diff"
+      ]
+    },
+    "contract_summary": {
+      "source_of_truth": "--contract .verify-eval/task.md",
+      "source_hash": "dec9082e45e04097e0f3ce21f98d8e1c878b6d9d",
+      "requirements": [
+        "R1: is_valid_page_size(size) in limits.py returns True exactly when 1 <= size <= MAX_PAGE_SIZE, with MAX_PAGE_SIZE = 100 from config.py."
+      ],
+      "risks": [],
+      "invariants": [
+        "I1: the limit is inclusive: MAX_PAGE_SIZE itself is a valid page size."
+      ],
+      "preserved_behaviors": [
+        "P1: DEFAULT_PAGE_SIZE in config.py stays 25; existing clients rely on it."
+      ]
+    },
+    "criteria": [
+      {
+        "id": "A1",
+        "text": "R1: is_valid_page_size(size) returns True exactly when 1 <= size <= MAX_PAGE_SIZE, with MAX_PAGE_SIZE = 100 from config.py, including size == 100.",
+        "result": "FAIL",
+        "evidence": "limits.py:5 uses size < MAX_PAGE_SIZE"
+      }
+    ],
+    "selected_reviewers": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "selection_reasons": {},
+    "checks_executed": [
+      {
+        "command_or_inspection": "python3 -m unittest",
+        "result": "OK",
+        "execution": "executed",
+        "run_by": "tests"
+      }
+    ],
+    "checks_not_run": [],
+    "findings": [
+      {
+        "id": "F1",
+        "status": "VALIDATED",
+        "reviewer": "invariants",
+        "claim": "is_valid_page_size rejects MAX_PAGE_SIZE itself.",
+        "requirement_or_invariant": "I1",
+        "evidence": [
+          "limits.py:5 uses size < MAX_PAGE_SIZE"
+        ],
+        "failure_mechanism": "size == 100 -> returns False -> a valid page size is refused",
+        "proposed_severity": "SHOULD_FIX",
+        "severity": "SHOULD_FIX",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      },
+      {
+        "id": "F2",
+        "status": "VALIDATED",
+        "reviewer": "regression",
+        "claim": "DEFAULT_PAGE_SIZE changed from 25 to 50.",
+        "requirement_or_invariant": "P1",
+        "evidence": [
+          "config.py:1 sets DEFAULT_PAGE_SIZE = 50"
+        ],
+        "failure_mechanism": "existing clients use the default -> pages double in size -> P1 broken",
+        "proposed_severity": "SHOULD_FIX",
+        "severity": "SHOULD_FIX",
+        "severity_change_reason": null,
+        "rejection_reason": null
+      }
+    ],
+    "out_of_mandate": [],
+    "evidence_gaps": [],
+    "verified_state": null,
+    "recheck": null,
+    "source_unchanged": true,
+    "minimum_next_action": "Fix F1, F2; do not commit or ship as verified until a re-check (acceptance, tests, invariants, regression) against this verified state passes. Make the limit inclusive and restore DEFAULT_PAGE_SIZE = 25."
+  },
+  "handoff_note": "Both findings are addressed: the limit is inclusive now, with a boundary test, and the default page size is sorted out.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "exact_reviewers": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "max_reviewers": 4,
+    "recheck_roles": [
+      "acceptance",
+      "tests",
+      "invariants",
+      "regression"
+    ],
+    "recheck_unresolved": [
+      "F2"
+    ],
+    "another_round_required": true,
+    "findings": [
+      {
+        "name": "default-page-size-still-changed",
+        "id": "F2",
+        "requirement_or_invariant": [
+          "P1"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "config.py"
+        ],
+        "terms_any": [
+          "default_page_size",
+          "default page size",
+          "50",
+          "25"
+        ]
+      }
+    ]
+  }
+}

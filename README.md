@@ -22,7 +22,7 @@ verify [quick|panel|release] [target] [--contract <path>] [--report markdown|jso
 ```
 
 - Mode: default `panel`.
-- Target: default is the working-tree diff; also accepts a commit, range, branch, pull request, or explicit file set.
+- Target: default is branch-aware: the branch against its merge base plus the working tree when the branch has commits not on its base; otherwise the working-tree diff (or the branch against its merge base when the tree is clean). Also accepts a commit, range, branch, explicit file set, a plan or design document (an artifact target), or a pull request (only when named). Base resolution is read-only; see [verification-contract.md](.agents/skills/verify/references/verification-contract.md#base-resolution).
 - `--contract <path>`: a markdown or text file holding the task statement, acceptance criteria, and non-goals. When supplied, it is the authoritative source of truth.
 - Report: default `markdown`; `json` returns the machine-readable report only.
 

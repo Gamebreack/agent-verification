@@ -1,0 +1,262 @@
+{
+  "case_id": "contract-regression",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff vs HEAD 8cf54ca (users.py, test_users.py)",
+  "scope": {
+    "covered": [
+      "users.py working-tree change",
+      "test_users.py working-tree change",
+      "consumer.py as unchanged consumer of get_user"
+    ],
+    "not_covered": [
+      "branch commits (main has only the baseline commit; no base delta)",
+      "pre-existing code outside the target beyond consumer inspection",
+      "staged content (none; index matches HEAD)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/contract-regression/repo/.verify-eval/task.md",
+    "source_hash": "71e348cd1728461c9ba50107b2503c61830c522b",
+    "requirements": [
+      "R1: get_user(user_id) responses include email"
+    ],
+    "risks": [
+      "users.get_user response shape: medium; structured response keys consumed by consumer.render_user",
+      "test_users.py: low; test evidence for R1/P1"
+    ],
+    "invariants": [
+      "C1: do not rename existing response fields"
+    ],
+    "preserved_behaviors": [
+      "P1: preserve the existing required name field because render_user consumes it"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "R1",
+      "text": "responses include email",
+      "result": "PASS",
+      "evidence": "users.py:5 sets \"email\"; test_users.py:10 asserts it; `python3 -m unittest test_users -v` -> OK"
+    },
+    {
+      "id": "P1",
+      "text": "preserve the existing required name field because render_user consumes it",
+      "result": "FAIL",
+      "evidence": "users.py:2-6 has no \"name\" key; `python3 -c \"import consumer; print(consumer.render_user(7))\"` -> KeyError: 'name' at consumer.py:6"
+    },
+    {
+      "id": "C1",
+      "text": "Do not rename existing response fields.",
+      "result": "FAIL",
+      "evidence": "git diff users.py: -\"name\": \"Ada Lovelace\" / +\"display_name\": \"Ada Lovelace\" (users.py:4)"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "regression"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel baseline",
+    "tests": "panel baseline",
+    "regression": "trigger: structured response keys of get_user consumed by another module (consumer.render_user)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest test_users -v",
+      "result": "Ran 1 test (test_includes_email), OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c \"import consumer; print(consumer.render_user(7))\"",
+      "result": "KeyError: 'name' at consumer.py:6",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -B -c \"import users; print(sorted(users.get_user(7)))\"",
+      "result": "['display_name', 'email', 'id']",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "git grep -n \"render_user\\|consumer\" -- '*.py'",
+      "result": "only consumer.py:4 definition; no test references render_user",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "git diff / git show HEAD:users.py, HEAD:test_users.py; caller inspection of get_user",
+      "result": "name renamed to display_name; historical shape test removed; callers are consumer.py:5 and test_users.py:8 only",
+      "execution": "static",
+      "run_by": "regression"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "invariants and security reviewers",
+      "reason": "no triggering surface (no ranges/ordering/state/concurrency; no auth, secrets, or trust boundary)"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "get_user renames the existing required `name` field to `display_name`, so `name` is no longer returned and render_user fails on every call",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "users.py:4 \"display_name\": \"Ada Lovelace\"; no \"name\" key in users.py:2-6",
+        "consumer.py:6 reads user['name']",
+        "python3 -c \"import consumer; print(consumer.render_user(7))\" -> KeyError: 'name'"
+      ],
+      "failure_mechanism": "render_user(any id) -> get_user returns dict without 'name' -> KeyError at consumer.py:6 -> the consumer the contract names is broken; also violates C1 (no field renames)",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-2",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "The new test asserts the renamed `display_name` key and the diff deletes the only test that guarded `name`, so the suite enforces the regression and passes while P1/C1 are broken",
+      "requirement_or_invariant": "C1",
+      "evidence": [
+        "test_users.py:9 assertEqual(user[\"display_name\"], \"Ada Lovelace\")",
+        "git diff test_users.py removes test_existing_shape asserting {\"id\": 7, \"name\": \"Ada Lovelace\"}",
+        "python3 -m unittest test_users -v -> OK while render_user raises KeyError"
+      ],
+      "failure_mechanism": "contract-correct implementation returning `name` -> KeyError at test_users.py:9; broken implementation -> green suite -> regression ships undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "BLOCKER",
+      "severity_change_reason": "a test asserting wrong behavior takes the severity of the code it protects (acceptance-1, BLOCKER)",
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The change renames `name` to `display_name`, which the contract forbids",
+      "requirement_or_invariant": "C1",
+      "evidence": [
+        "git diff users.py",
+        "task.md: Do not rename existing response fields."
+      ],
+      "failure_mechanism": "response shape {id,name} -> {id,display_name,email} -> callers using name break",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1 (same root cause: rename at users.py:4)",
+      "rejection_reason": "duplicate of acceptance-1 (same root cause: rename at users.py:4)"
+    },
+    {
+      "id": "regression-1",
+      "status": "NON_ISSUE",
+      "reviewer": "regression",
+      "claim": "get_user no longer returns `name`, so consumer.render_user raises KeyError",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "users.py:4",
+        "consumer.py:5-6",
+        "render_user(7) -> KeyError: 'name'"
+      ],
+      "failure_mechanism": "render_user call -> no name key -> KeyError at consumer.py:6",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of acceptance-1",
+      "rejection_reason": "duplicate of acceptance-1"
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "The diff deletes the only test guarding `name` and adds none, so the suite passes while P1 is violated",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git diff test_users.py removes test_existing_shape",
+        "test_users.py:7-10 never checks name"
+      ],
+      "failure_mechanism": "name dropped -> test_includes_email still passes -> regression ships green",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "merged into tests-2 (same root cause: test rewritten to the renamed shape)",
+      "rejection_reason": "merged into tests-2 (same root cause: test rewritten to the renamed shape)"
+    },
+    {
+      "id": "regression-2",
+      "status": "NON_ISSUE",
+      "reviewer": "regression",
+      "claim": "The diff replaces the historical shape test with one asserting display_name, hiding the P1 regression",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git diff test_users.py",
+        "test_users.py:8-9"
+      ],
+      "failure_mechanism": "suite checks display_name not name -> green while P1 broken",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of tests-2",
+      "rejection_reason": "duplicate of tests-2"
+    },
+    {
+      "id": "acceptance-3",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "Required evidence E2 for P1 is missing because the name test was replaced",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git diff test_users.py",
+        "test_users.py:9"
+      ],
+      "failure_mechanism": "green suite gives false evidence for P1",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "duplicate of tests-2; E2 allowed inspection, which the lead performed, so it is not a MISSING gap",
+      "rejection_reason": "duplicate of tests-2; E2 allowed inspection, which the lead performed, so it is not a MISSING gap"
+    },
+    {
+      "id": "tests-3",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test exercises consumer.render_user, so breaking it goes undetected",
+      "requirement_or_invariant": "P1",
+      "evidence": [
+        "git grep render_user -> only consumer.py:4"
+      ],
+      "failure_mechanism": "shape change -> no test runs consumer.py:6 -> KeyError reaches callers",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "test-strength evidence of the acceptance-1 code defect; merged into it (render_user test was absent before the change and E2 permits inspection)",
+      "rejection_reason": "test-strength evidence of the acceptance-1 code defect; merged into it (render_user test was absent before the change and E2 permits inspection)"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "code defect itself (users.py:4 renames name to display_name) belongs to correctness/contract reviewers",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    },
+    {
+      "reviewer": "regression",
+      "note": "R1/A1 holds: users.py:5 adds email and the lead's unittest run passes",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "8cf54ca6d4ba6e38c907b87ae738b4831f5989d7",
+    "files": {
+      "users.py": "693e97068bfbf985146c183c3f426756a8fb6636",
+      "test_users.py": "f12424cf3f199bcedbd0daeabf2af42848ccbc92"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Restore the `name` key in get_user (keep email, drop the display_name rename) and update test_users.py to assert name and email; then re-check with acceptance, tests and regression against verified_state head 8cf54ca (users.py 693e970, test_users.py f12424c). Do not commit, push, or describe this change as verified until a re-check passes."
+}

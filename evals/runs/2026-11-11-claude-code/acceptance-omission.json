@@ -1,0 +1,220 @@
+{
+  "case_id": "acceptance-omission",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 559223533b48bf6473bc325ec132c37ae7a79c19 on main (profile.py, test_profile.py)",
+  "scope": {
+    "covered": [
+      "profile.py working-tree change (format_profile implementation)",
+      "test_profile.py working-tree change"
+    ],
+    "not_covered": [
+      "Branch commits: no base resolved (origin/HEAD is not a symbolic ref and main is the current branch with no commits beyond baseline), so only the working-tree diff was reviewed",
+      "Pre-existing code outside the diff",
+      "Nothing was staged; the index matches HEAD"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract <eval-dir>/claude-code/acceptance-omission/repo/.verify-eval/task.md",
+    "source_hash": "8b5aa042987cefdffbb88b13509763ad8e32d9e9",
+    "requirements": [
+      "R1: trim surrounding whitespace from both names",
+      "R2: return both names separated by exactly one space",
+      "R3: a blank component must not create leading or trailing whitespace"
+    ],
+    "risks": [
+      "profile.format_profile (pure function, no other callers in repo): low"
+    ],
+    "invariants": [
+      "I1: output has no leading or trailing whitespace"
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: format_profile trims surrounding whitespace from both first_name and last_name (e.g. format_profile('  Ada  ', '  Lovelace  ') == 'Ada Lovelace')",
+      "result": "FAIL",
+      "evidence": "profile.py:2 `return first_name.strip()` ignores last_name; lead probe f('  Ada  ','  Lovelace  ') -> 'Ada'"
+    },
+    {
+      "id": "A2",
+      "text": "R2: format_profile returns both names separated by exactly one space (format_profile('Ada', 'Lovelace') == 'Ada Lovelace')",
+      "result": "FAIL",
+      "evidence": "lead probe f('Ada','Lovelace') -> 'Ada'"
+    },
+    {
+      "id": "A3",
+      "text": "A blank component must not create leading or trailing whitespace (format_profile('Ada', '  ') == 'Ada'; format_profile('', 'Lovelace') == 'Lovelace')",
+      "result": "FAIL",
+      "evidence": "lead probe f('Ada','  ') -> 'Ada' (passes only because last_name is dropped); f('','Lovelace') -> '' (expected 'Lovelace')"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests"
+  ],
+  "selection_reasons": {
+    "acceptance": "panel-mode baseline",
+    "tests": "panel-mode baseline"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "python3 -m unittest -q test_profile",
+      "result": "Ran 1 test ... OK (the only test asserts 'Ada', which contradicts R2)",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "python3 -c 'from profile import format_profile as f; print(repr(f(\"  Ada  \",\"  Lovelace  \")), repr(f(\"Ada\",\"Lovelace\")), repr(f(\"Ada\",\"  \")), repr(f(\"\",\"Lovelace\")))'",
+      "result": "'Ada' 'Ada' 'Ada' ''",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "same probe of format_profile with A1-A3 inputs",
+      "result": "'Ada' 'Ada' 'Ada' ''",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest -q test_profile; python3 -I -c probe of A1-A3 inputs",
+      "result": "1 test OK; probe returned 'Ada','Ada','Ada',''",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "git diff; read profile.py, test_profile.py, .verify-eval/task.md",
+      "result": "profile.py:2 returns first_name.strip() only; test_profile.py:9-10 has a single test asserting format_profile('  Ada  ','Lovelace') == 'Ada'",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [
+    {
+      "check": "regression, invariants, and security reviewers",
+      "reason": "No trigger fired: the change is a pure function with no consumers, persisted state, boundaries, or trust surfaces"
+    }
+  ],
+  "findings": [
+    {
+      "id": "acceptance-1",
+      "status": "VALIDATED",
+      "reviewer": "acceptance",
+      "claim": "format_profile ignores last_name entirely, so it never joins the two names and drops a non-blank last name even when the first name is blank",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "profile.py:2 `return first_name.strip()`",
+        "lead probe: f('Ada','Lovelace') -> 'Ada'; f('  Ada  ','  Lovelace  ') -> 'Ada'; f('','Lovelace') -> ''"
+      ],
+      "failure_mechanism": "any call with a non-blank last_name -> last_name is discarded -> returns only the trimmed first name (or '') instead of 'First Last'; R1 (last-name trimming), R2 and A3 fail",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "tests-1",
+      "status": "VALIDATED",
+      "reviewer": "tests",
+      "claim": "test_trims_first_name asserts wrong behavior: it expects format_profile('  Ada  ', 'Lovelace') == 'Ada' instead of 'Ada Lovelace'",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "test_profile.py:10 assertEqual(format_profile(\"  Ada  \", \"Lovelace\"), \"Ada\")",
+        "python3 -m unittest -q test_profile -> Ran 1 test ... OK"
+      ],
+      "failure_mechanism": "the implementation drops last_name -> the test locks in that output and passes -> the suite reports green for a contract violation and would fail a correct implementation",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "format_profile('', 'Lovelace') returns '' instead of 'Lovelace'",
+      "requirement_or_invariant": "A3",
+      "evidence": [
+        "lead probe f('','Lovelace') -> ''",
+        "profile.py:2"
+      ],
+      "failure_mechanism": "blank first_name -> only the empty first name is returned -> last name lost",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate symptom of acceptance-1 (last_name ignored); merged",
+      "rejection_reason": "Duplicate symptom of acceptance-1 (last_name ignored); evidence merged into acceptance-1"
+    },
+    {
+      "id": "acceptance-3",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The test suite enforces behavior that contradicts the contract, so the passing run is not E1 evidence",
+      "requirement_or_invariant": "A2",
+      "evidence": [
+        "test_profile.py:9-10"
+      ],
+      "failure_mechanism": "test expects 'Ada' where R2 requires 'Ada Lovelace' -> suite passes on wrong code",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of tests-1; merged",
+      "rejection_reason": "Duplicate of tests-1 (same wrong assertion at test_profile.py:10); merged"
+    },
+    {
+      "id": "tests-2",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers A2 or A3",
+      "requirement_or_invariant": "A2",
+      "evidence": [
+        "test_profile.py:8-10 has a single test method"
+      ],
+      "failure_mechanism": "last_name omitted or blank component mishandled -> no test fails -> regressions ship undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Required-evidence absence is a MISSING evidence gap, not a finding",
+      "rejection_reason": "Absent required evidence (E1 for A2/A3) is recorded as a MISSING evidence gap per adjudication rules"
+    },
+    {
+      "id": "tests-3",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "A1 is only partly tested; last_name trimming is never asserted",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "test_profile.py:10 passes 'Lovelace' without surrounding whitespace"
+      ],
+      "failure_mechanism": "last_name not trimmed -> no test fails",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Required-evidence absence is a MISSING evidence gap, not a finding",
+      "rejection_reason": "Absent required evidence (E1 for A1 last-name trimming) is recorded as a MISSING evidence gap; merged with tests-2"
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "profile.py:2 returns only the trimmed first name; A2/A3 fail at runtime",
+      "disposition": "adjudicated",
+      "finding_id": "acceptance-1"
+    }
+  ],
+  "evidence_gaps": [
+    {
+      "kind": "MISSING",
+      "evidence": "E1: no tests demonstrate A1 (both names trimmed), A2 ('Ada Lovelace' joined with one space), or A3 (blank first or last component yields no leading or trailing whitespace); the only test asserts contradicting behavior"
+    }
+  ],
+  "verified_state": {
+    "head": "559223533b48bf6473bc325ec132c37ae7a79c19",
+    "files": {
+      "profile.py": "ad7ac93e3d081e75dbfbd404a5e243814299410a",
+      "test_profile.py": "7d216dd5fd66f9560dd231a933cd269dc3c888a9"
+    }
+  },
+  "recheck": null,
+  "source_unchanged": true,
+  "minimum_next_action": "Make format_profile trim both names and join the non-blank ones with a single space, replace the wrong test at test_profile.py:10 with tests for A1-A3, then re-check with the acceptance and tests roles against verified_state head 559223533b48bf6473bc325ec132c37ae7a79c19 (profile.py ad7ac93e, test_profile.py 7d216dd5). Do not commit, push, or describe the change as verified until a re-check passes. Note: the Python runs left an untracked __pycache__/ cache; no tracked file changed."
+}

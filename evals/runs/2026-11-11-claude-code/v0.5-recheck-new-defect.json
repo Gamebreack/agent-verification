@@ -1,0 +1,246 @@
+{
+  "case_id": "v0.5-recheck-new-defect",
+  "verdict": "FIX REQUIRED",
+  "assurance": "independent panel",
+  "requested_mode": "panel",
+  "effective_mode": "panel",
+  "target": "working-tree diff against HEAD 06b32df (re-check delta: events.py, test_events.py; no new commits)",
+  "scope": {
+    "covered": [
+      "events.py",
+      "test_events.py"
+    ],
+    "not_covered": [
+      "pre-existing code outside the diff",
+      "staged content (index matches HEAD; no staged changes)"
+    ]
+  },
+  "contract_summary": {
+    "source_of_truth": "--contract .verify-eval/task.md",
+    "source_hash": "d55651b8b69fe8eaac6413c278e819d313f9de4b",
+    "requirements": [
+      "R1: call handler once for each distinct event, in input order.",
+      "R2: an event redelivered with an id already seen in the same call is not passed to handler again."
+    ],
+    "risks": [],
+    "invariants": [
+      "I1: events with distinct ids are never dropped."
+    ],
+    "preserved_behaviors": []
+  },
+  "criteria": [
+    {
+      "id": "A1",
+      "text": "R1: handler is called once for each distinct event, in input order.",
+      "result": "FAIL",
+      "evidence": "events.py:4,7 deduplicate on event[\"kind\"]; lead probe process_events([e(1,'created'), e(2,'created'), e(1,'created')]) -> handled ids [1], so distinct id 2 is dropped"
+    },
+    {
+      "id": "A2",
+      "text": "R2: an event redelivered with an id already seen in the same call, adjacent or not, is not passed to handler again.",
+      "result": "PASS",
+      "evidence": "A redelivered event repeats the same event, including its kind, so the kind set skips it. Lead probe [e(1,'created'), e(2,'paid'), e(1,'created')] -> [1, 2]; test_events.py:16-19 and test_events.py:11-14 pass"
+    }
+  ],
+  "selected_reviewers": [
+    "acceptance",
+    "tests",
+    "invariants"
+  ],
+  "selection_reasons": {
+    "acceptance": "re-check baseline role for panel mode",
+    "tests": "re-check baseline role for panel mode",
+    "invariants": "has open prior SHOULD_FIX F1 (duplicate delivery / idempotency)"
+  },
+  "checks_executed": [
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest",
+      "result": "Ran 2 tests, OK",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -c probe: process_events([e(1,'created'), e(2,'created'), e(1,'created')]) and [e(1,'created'), e(2,'paid'), e(1,'created')]",
+      "result": "[1] and [1, 2] respectively",
+      "execution": "executed",
+      "run_by": "lead"
+    },
+    {
+      "command_or_inspection": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest -v; python3 -c probe with distinct ids sharing a kind",
+      "result": "2 tests OK; [e(1,'created'), e(2,'created')] -> [1]",
+      "execution": "executed",
+      "run_by": "tests"
+    },
+    {
+      "command_or_inspection": "python3 -c probes for distinct ids sharing a kind and for non-adjacent redelivery",
+      "result": "[e(1,'created'), e(2,'created')] -> [1]; [e(1,'created'), e(2,'paid'), e(1,'created')] -> [1, 2]",
+      "execution": "executed",
+      "run_by": "invariants"
+    },
+    {
+      "command_or_inspection": "python3 -m unittest; python3 -c probe [e(1,'created'), e(2,'created'), e(1,'paid')]",
+      "result": "2 tests OK; probe -> [1, 1]",
+      "execution": "executed",
+      "run_by": "acceptance"
+    },
+    {
+      "command_or_inspection": "git diff; read events.py:1-7, test_events.py:1-23",
+      "result": "Dedup key changed from adjacent-id comparison to a set of event kinds; one non-adjacent redelivery test added",
+      "execution": "static",
+      "run_by": "lead"
+    }
+  ],
+  "checks_not_run": [],
+  "findings": [
+    {
+      "id": "invariants-1",
+      "status": "VALIDATED",
+      "reviewer": "invariants",
+      "claim": "process_events drops events that have distinct ids but share a kind, because deduplication keys on event[\"kind\"] instead of event[\"id\"].",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "events.py:4 `if event[\"kind\"] in handled:`",
+        "events.py:7 `handled.add(event[\"kind\"])`",
+        "lead probe: process_events([e(1,'created'), e(2,'created'), e(1,'created')]) -> handled ids [1]",
+        "test_events.py:13,18 give every distinct id its own kind, so `python3 -m unittest` passes (2 tests OK) while I1 is broken (merged from acceptance-3 and tests-1)"
+      ],
+      "failure_mechanism": "two distinct events of the same kind (e.g. two 'created' events with ids 1 and 2) -> the second is skipped as if it were a redelivery -> a legitimate event is silently never handled, which breaks I1 and R1/A1; the tests cannot detect it",
+      "proposed_severity": "BLOCKER",
+      "severity": "BLOCKER",
+      "severity_change_reason": null,
+      "rejection_reason": null
+    },
+    {
+      "id": "acceptance-1",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "process_events drops events that have distinct ids but share a kind already handled.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "events.py:4,7"
+      ],
+      "failure_mechanism": "two distinct events with the same kind -> the second is skipped -> a distinct event is lost",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Duplicate of invariants-1, merged.",
+      "rejection_reason": "Duplicate of the accepted root cause invariants-1 (dedup keyed on kind); merged."
+    },
+    {
+      "id": "acceptance-2",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "A redelivered id is passed to the handler again when its kind has not been seen yet.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "events.py:4 checks only kind",
+        "probe [e(1,'created'), e(2,'created'), e(1,'paid')] -> [1, 1]"
+      ],
+      "failure_mechanism": "same id arrives with a kind not seen yet -> the kind check passes -> the handler runs twice for that id",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Same root cause as invariants-1; the trigger falls outside the contract's notion of a redelivery.",
+      "rejection_reason": "The trigger needs a 'redelivery' with a different kind. The contract describes a redelivery as the same event repeated, so its kind matches and it is skipped (lead probe [1, 2]). The underlying wrong-key root cause is already accepted as invariants-1."
+    },
+    {
+      "id": "acceptance-3",
+      "status": "NON_ISSUE",
+      "reviewer": "acceptance",
+      "claim": "The test suite cannot tell deduplication by id from deduplication by kind, so it passes on the defective code.",
+      "requirement_or_invariant": "A1",
+      "evidence": [
+        "test_events.py:13,18 use a distinct kind for every distinct id",
+        "python3 -m unittest -> 2 tests OK"
+      ],
+      "failure_mechanism": "test data maps ids to kinds 1:1 -> kind-keyed and id-keyed dedup behave the same -> the defect goes undetected",
+      "proposed_severity": "SHOULD_FIX",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Test that cannot fail while its requirement is broken is merged into the code defect.",
+      "rejection_reason": "Under test-strength rules this is evidence of invariants-1, not a separate defect; merged into invariants-1."
+    },
+    {
+      "id": "tests-1",
+      "status": "NON_ISSUE",
+      "reviewer": "tests",
+      "claim": "No test covers distinct ids that share a kind; the suite passes although events.py deduplicates by kind instead of id.",
+      "requirement_or_invariant": "I1",
+      "evidence": [
+        "events.py:4,7",
+        "test fixtures map id 1:1 to kind",
+        "python3 -m unittest -v -> 2 tests OK",
+        "probe [e(1,'created'), e(2,'created')] -> [1]"
+      ],
+      "failure_mechanism": "two events with distinct ids and the same kind -> the second never reaches the handler -> silent loss while the tests pass",
+      "proposed_severity": "BLOCKER",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "Merged into invariants-1 as its test evidence.",
+      "rejection_reason": "Duplicate symptom of the accepted root cause invariants-1 (a test that cannot fail while the requirement is broken is merged into the code defect)."
+    },
+    {
+      "id": "invariants-2",
+      "status": "NON_ISSUE",
+      "reviewer": "invariants",
+      "claim": "Redelivery is suppressed only because it repeats the kind, not the id; the same id with a different kind is handled twice.",
+      "requirement_or_invariant": "R2",
+      "evidence": [
+        "probe [e(1,'created'), e(1,'paid')] -> [1, 1]"
+      ],
+      "failure_mechanism": "same id with a different kind -> handled twice",
+      "proposed_severity": "OPTIONAL",
+      "severity": "NON_ISSUE",
+      "severity_change_reason": "The input is outside the contract's data rules, and the root cause is already accepted.",
+      "rejection_reason": "The reviewer concedes this input cannot occur under the contract (a redelivery is the same event). Same root cause as invariants-1; merged."
+    }
+  ],
+  "out_of_mandate": [
+    {
+      "reviewer": "tests",
+      "note": "The defect in events.py itself (keying on kind) is a correctness issue for the code reviewer.",
+      "disposition": "adjudicated",
+      "finding_id": "invariants-1"
+    },
+    {
+      "reviewer": "invariants",
+      "note": "Concurrency/thread-safety of handler; KeyError when an event is missing id or kind.",
+      "disposition": "adjudicated",
+      "finding_id": null
+    }
+  ],
+  "evidence_gaps": [],
+  "verified_state": {
+    "head": "06b32dfa17653e05708de1b0cefbff7c0bd90b96",
+    "files": {
+      "events.py": "a852a61e7b5ffc9daa9400718fbe3c823b664d4d",
+      "test_events.py": "f1bb0bca3f8a7b23783b116f2edf2fc3f782e661"
+    }
+  },
+  "recheck": {
+    "round": 1,
+    "prior_verdict": "FIX REQUIRED",
+    "prior_findings": [
+      {
+        "id": "F1",
+        "resolution": "resolved",
+        "evidence": [
+          "events.py:2-7 now track every value handled during the call instead of only the previous event",
+          "lead probe [e(1,'created'), e(2,'paid'), e(1,'created')] -> [1, 2]",
+          "test_events.py:16-19 passes (python3 -m unittest -> 2 tests OK)"
+        ]
+      }
+    ],
+    "roles": [
+      "acceptance",
+      "tests",
+      "invariants"
+    ],
+    "delta": {
+      "commits": [],
+      "paths": [
+        "events.py",
+        "test_events.py"
+      ]
+    },
+    "another_round_required": true
+  },
+  "source_unchanged": true,
+  "minimum_next_action": "Fix invariants-1: deduplicate on event[\"id\"], not event[\"kind\"], and add a test with distinct ids that share a kind (e.g. [e(1,'created'), e(2,'created'), e(1,'created')] -> [1, 2]). Then run a re-check (acceptance, tests, invariants) against verified state head 06b32dfa with events.py a852a61e and test_events.py f1bb0bca. Do not commit, push, or describe the change as verified until that re-check passes."
+}

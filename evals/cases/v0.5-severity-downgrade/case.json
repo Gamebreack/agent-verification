@@ -1,0 +1,42 @@
+{
+  "id": "v0.5-severity-downgrade",
+  "title": "True-mechanism claim on a real C1 defect proposed as BLOCKER; the lead may keep the severity or lower it with a reason",
+  "mode": "quick",
+  "task": "Add the export command: export_report(rows, path) in export.py. R1: write a CSV file at path containing exactly render_csv(rows): a header line name,amount, then one name,amount line per row, in input order. C1: a failed export must not leave a partial output file at path. Write errors are rare and recoverable by re-running the export; nothing reads path while an export runs.",
+  "seeded_reviewer_claim": "Proposed severity: BLOCKER. export_report opens path with open(path, \"w\") and writes into it directly (export.py:5-6). open(path, \"w\") truncates any existing file before the write, so if handle.write raises partway (for example, the disk fills up), a truncated, partial CSV is left at path. That breaks C1. Corrupted exports are unacceptable: this must block release.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "exact_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 2,
+    "findings": [
+      {
+        "name": "partial-file-on-write-error",
+        "requirement_or_invariant": [
+          "C1"
+        ],
+        "severities": [
+          "SHOULD_FIX",
+          "BLOCKER"
+        ],
+        "proposed_severities": [
+          "BLOCKER"
+        ],
+        "evidence_paths": [
+          "export.py"
+        ],
+        "terms_any": [
+          "partial",
+          "write error",
+          "failed export",
+          "fails",
+          "left behind",
+          "truncat"
+        ]
+      }
+    ]
+  }
+}
