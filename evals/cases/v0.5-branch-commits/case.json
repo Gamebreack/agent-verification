@@ -1,0 +1,42 @@
+{
+  "id": "v0.5-branch-commits",
+  "title": "A defect in an earlier branch commit is inside the branch-aware default target",
+  "mode": "panel",
+  "task": "This branch adds pagination and fixes singular labels. R1: paginate(items, page, page_size) in paginate.py returns the items of 1-based page number page, that is items[(page - 1) * page_size : page * page_size]; page 1 is the first page. R2: plural_label(count, noun) in labels.py returns \"1 <noun>\" for count 1 and \"<count> <noun>s\" otherwise.",
+  "branch_commits": [
+    "branch-1"
+  ],
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "findings": [
+      {
+        "name": "first-page-skipped",
+        "requirement_or_invariant": [
+          "R1"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "paginate.py"
+        ],
+        "terms_any": [
+          "first page",
+          "page 1",
+          "off-by-one",
+          "off by one",
+          "skip",
+          "offset",
+          "page - 1"
+        ]
+      }
+    ]
+  }
+}

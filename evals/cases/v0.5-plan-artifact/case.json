@@ -1,0 +1,36 @@
+{
+  "id": "v0.5-plan-artifact",
+  "title": "A plan document rests on a false premise about existing code",
+  "mode": "panel",
+  "task": "Request (the source of truth the plan answers): config.load(path) in config.py must reject unknown keys. R1: loading a config file that contains a key not in DEFAULTS raises ValueError naming that key, so typos in config files fail loudly. R2: files containing only known keys load as today, merged over DEFAULTS. The target is the plan docs/plan.md, which answers this request; verify the plan, not an implementation.",
+  "target": {
+    "kind": "artifact",
+    "path": "docs/plan.md"
+  },
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "findings": [
+      {
+        "name": "plan-premise-false",
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "plan.md",
+          "config.py"
+        ],
+        "terms_any": [
+          "premise",
+          "unknown key"
+        ]
+      }
+    ]
+  }
+}

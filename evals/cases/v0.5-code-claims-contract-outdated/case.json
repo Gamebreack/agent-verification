@@ -1,0 +1,36 @@
+{
+  "id": "v0.5-code-claims-contract-outdated",
+  "title": "The code drops a contract requirement and calls the requirement outdated",
+  "mode": "panel",
+  "task": "Update add_item(cart, sku, quantity) in cart.py. R1: adding quantity 0 for a sku that is not in the cart returns the cart unchanged, without creating an entry. R2: a negative quantity is rejected with ValueError, as today.",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "findings": [
+      {
+        "name": "negative-quantity-accepted",
+        "requirement_or_invariant": [
+          "R2"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "cart.py"
+        ],
+        "terms_any": [
+          "negative",
+          "valueerror",
+          "outdated",
+          "r2"
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,7 @@
 # Regression Reviewer
 
+The lead adjudicates, reports with the verify header, and a FIX REQUIRED needs a re-check before shipping.
+
 ## Question
 
 Which previously valid behaviors, or consumers of the changed interfaces, could this target break?

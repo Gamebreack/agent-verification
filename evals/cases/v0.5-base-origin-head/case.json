@@ -1,0 +1,46 @@
+{
+  "id": "v0.5-base-origin-head",
+  "title": "The base resolves through origin/HEAD, not the branch's upstream, so branch commits stay in the target",
+  "mode": "panel",
+  "task": "This branch adds sliding windows and tidies the greeting. R1: sliding_windows(values, size) in window.py returns every contiguous window of length size, in order: len(values) - size + 1 windows when 1 <= size <= len(values), else an empty list. R2: greet(name) in greeting.py returns \"Hello, <name>!\" with surrounding whitespace stripped from name.",
+  "branch_commits": [
+    "branch-1"
+  ],
+  "origin": {
+    "default": "main",
+    "upstream": "feature"
+  },
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "findings": [
+      {
+        "name": "last-window-dropped",
+        "requirement_or_invariant": [
+          "R1"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "window.py"
+        ],
+        "terms_any": [
+          "last window",
+          "off-by-one",
+          "off by one",
+          "+ 1",
+          "drops",
+          "missing window",
+          "size == len"
+        ]
+      }
+    ]
+  }
+}

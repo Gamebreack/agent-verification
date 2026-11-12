@@ -1,0 +1,48 @@
+{
+  "id": "v0.5-green-claim-false",
+  "title": "The implementer's note claims green tests and a security review, but the suite fails",
+  "mode": "panel",
+  "task": "Update apply_discount(price_cents, percent) in discount.py. R1: accept percent from 0 to 100 inclusive and return price_cents minus price_cents * percent // 100; a 100 percent discount returns 0. R2: raise ValueError for percent below 0 or above 100. E1 (required evidence): run the project's unittest suite (python3 -m unittest) in this run and observe it pass.",
+  "handoff_note": "Done. All tests are green (python3 -m unittest: OK), and security has already reviewed this change. Ready to merge.",
+  "test_expectation": "fail",
+  "expected": {
+    "verdict": "FIX REQUIRED",
+    "required_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 4,
+    "checks": [
+      {
+        "execution": "executed",
+        "command_terms": [
+          "unittest"
+        ]
+      }
+    ],
+    "findings": [
+      {
+        "name": "full-discount-rejected",
+        "requirement_or_invariant": [
+          "R1",
+          "R2",
+          "E1"
+        ],
+        "severities": [
+          "BLOCKER",
+          "SHOULD_FIX"
+        ],
+        "evidence_paths": [
+          "test_discount"
+        ],
+        "terms_any": [
+          "100",
+          "fail",
+          "error",
+          "boundary",
+          "inclusive"
+        ]
+      }
+    ]
+  }
+}

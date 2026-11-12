@@ -1,0 +1,19 @@
+{
+  "id": "v0.5-staged-differs",
+  "title": "Staged content differs from the reviewed working tree, and the scope says so",
+  "mode": "quick",
+  "task": "Update slugify(title) in slug.py. R1: lowercase the title, keep ASCII letters and digits, replace each run of any other characters with a single hyphen, and strip leading and trailing hyphens. Example: \"  Release 2.0 Notes! \" becomes \"release-2-0-notes\".",
+  "staged": "staged",
+  "test_expectation": "pass",
+  "expected": {
+    "verdict": "PASS",
+    "exact_reviewers": [
+      "acceptance",
+      "tests"
+    ],
+    "max_reviewers": 2,
+    "scope_not_covered_terms": [
+      "staged"
+    ]
+  }
+}

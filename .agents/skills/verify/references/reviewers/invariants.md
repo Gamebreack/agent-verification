@@ -1,5 +1,7 @@
 # Invariants Reviewer
 
+The lead adjudicates, reports with the verify header, and a FIX REQUIRED needs a re-check before shipping.
+
 ## Question
 
 Can a boundary state, state transition, or failure path violate a rule that must always hold — or fail silently?
