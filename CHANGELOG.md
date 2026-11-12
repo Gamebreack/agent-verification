@@ -4,6 +4,10 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
+Adds the review lifecycle to the verify skill (re-check loop, fixed report header, evidence labelling, branch-aware targets), tightens adjudication, and records behavioral runs on two hosts.
+
 ### Changed
 - **Adjudication re-derives mechanisms from evidence:** the gate no longer takes a reviewer's stated mechanism on trust. It re-derives it from the evidence alone (shared-premise test; a caller echo or a weak test is not a mechanism).
 - **Test-strength rule:** a wrong test is a defect; a test the contract names but that is absent is MISSING; a mocked test on broken code counts as merged evidence; a weak test on correct code is a NON_ISSUE.
@@ -13,6 +17,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Reviewer briefs are clean:** reviewers get only the contract, the diff and their role; the contract is immutable once reviewers start, and a lead acting outside the contract's mandate is reported.
 
 ### Added
+- **`flow-map.md`:** the runtime flow of the skill (target resolution to report and the re-check loop) as three Mermaid diagrams; the single home of the flow diagram, linked from `docs/architecture.md`.
 - **Re-check loop:** after fixes, a re-check re-runs the roles against prior findings; a prior report is eligible only when its contract hash matches. It records each prior finding's resolution with evidence, new defects, and the unresolved set; it has explicit stop and no-ship rules, including optional-only and unfixed-outside-delta cases.
 - **Fixed report header:** every report opens with the same verdict header (verdict, assurance, mode, target, scope).
 - **Executed vs static evidence:** each piece of evidence is labelled executed or static; a capability check records whether reviewers could run anything (no reviewer shell), and a green-claim is not accepted without executed evidence.
@@ -72,7 +77,8 @@ First tagged release: the verify skill as a portable Agent Skill, with a validat
 - **Eval harness** (`scripts/eval_harness.py`) with nine behavioral fixtures, unit tests and a GitHub Actions validation workflow.
 - **Docs:** README, architecture, installation and evaluation, plus the first recorded run.
 
-[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Gamebreack/agent-verification/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Gamebreack/agent-verification/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Gamebreack/agent-verification/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Gamebreack/agent-verification/compare/v0.1.0...v0.2.0

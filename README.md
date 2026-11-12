@@ -83,6 +83,7 @@ See [Installation](docs/installation.md) for user-wide symlink locations.
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Flow map](flow-map.md): the runtime flow as diagrams
 - [Installation](docs/installation.md)
 - [Behavioral evaluation](docs/evaluation.md)
 - [Latest evaluation run](evals/runs/2026-09-28-claude-code.json)

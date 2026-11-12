@@ -4,14 +4,7 @@
 
 Build one canonical Agent Skill at `.agents/skills/verify`. Keep the orchestration policy in `SKILL.md`, detailed contracts in shared references, and each reviewer mandate in its own role file. There is no custom runtime; the verification lead uses the host's native subagent capability.
 
-```mermaid
-flowchart TD
-    A["Task + --contract + resolved target"] --> B["Verification Contract"]
-    B --> C["Panel selection (mode, risk, surface triggers)"]
-    C --> D["Clean-context reviewers"]
-    D --> E["Evidence-gated adjudication"]
-    E --> F["PASS / PASS WITH NOTES / FIX REQUIRED / INCONCLUSIVE"]
-```
+The runtime flow, from target resolution through the report and the re-check loop, is drawn in [`flow-map.md`](../flow-map.md).
 
 ## Modes
 
