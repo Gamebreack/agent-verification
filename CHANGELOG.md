@@ -4,19 +4,25 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-11
+
+Adds the review lifecycle to the verify skill (re-check loop, fixed report header, evidence labelling, branch-aware targets), tightens adjudication, and records behavioral runs on two hosts.
+
 ### Changed
 - **Adjudication re-derives mechanisms from evidence:** the gate no longer takes a reviewer's stated mechanism on trust. It re-derives it from the evidence alone (shared-premise test; a caller echo or a weak test is not a mechanism).
 - **Test-strength rule:** a wrong test is a defect; a test the contract names but that is absent is MISSING; a mocked test on broken code counts as merged evidence; a weak test on correct code is a NON_ISSUE.
 - **Invariants trigger guard in panel selection:** a numeric parameter, format width or input-type statement is no longer an invariants trigger by itself; the trigger is a range, boundary, ordering or state rule the contract requires. A trivial pure formatter now gets exactly the acceptance and tests reviewers.
-- **Branch-aware default target:** with no target given, the skill chooses between the working tree, staged changes, branch commits against the base, and the origin head, and states the choice and its scope (covered and not covered) in the report.
+- **Branch-aware default target:** with no target given, the default is the branch against its merge base plus the working tree (including untracked files) when the branch has commits not on its base, otherwise the working-tree diff, or the branch against its merge base if the tree is clean. The base comes from the invocation or repository instructions, then `origin/HEAD`, then local `main` or `master`; with no base the target is the working-tree diff only. A target may also be a commit, range, branch, explicit file set, plan or design document, or a pull request when named. The report's Scope states what was covered and not covered (staged content that differs from the working tree is not reviewed).
 - **Verdict and severity discipline:** the verdict follows from the validated findings; a severity may be downgraded only with stated evidence, and an unmet contract premise is reported rather than silently absorbed.
-- **Reviewer briefs are clean:** reviewers get only the contract, the diff and their role; the contract is immutable once reviewers start, and a lead acting outside the contract's mandate is reported.
+- **Reviewer briefs are clean:** reviewers get only the contract, the diff and their role; the contract is immutable once reviewers start, and a reviewer's `Out of mandate:` note is either adjudicated like any claim or listed under Open leads, never dropped.
 
 ### Added
-- **Re-check loop:** after fixes, a re-check re-runs the roles against prior findings; a prior report is eligible only when its contract hash matches. It records each prior finding's resolution with evidence, new defects, and the unresolved set; it has explicit stop and no-ship rules, including optional-only and unfixed-outside-delta cases.
-- **Fixed report header:** every report opens with the same verdict header (verdict, assurance, mode, target, scope).
+- **`flow-map.md`:** the runtime flow of the skill (target resolution to report and the re-check loop) as three Mermaid diagrams; the single home of the flow diagram, linked from `docs/architecture.md`.
+- **Re-check loop:** after fixes, a re-check re-runs the roles against prior findings; it is eligible only when a prior `FIX REQUIRED` report is available and its contract source is unchanged (a `--contract` file matched by blob hash, or a conversation that still contains the prior contract); otherwise a full verification runs. It records each prior finding's resolution with evidence, new defects, and the unresolved set; it has explicit stop and no-ship rules, including optional-only and unfixed-outside-delta cases.
+- **Fixed report header:** every report opens with the same header: Verdict, Target, Assurance, Evidence (executed vs static), Scope, and Verified state.
 - **Executed vs static evidence:** each piece of evidence is labelled executed or static; a capability check records whether reviewers could run anything (no reviewer shell), and a green-claim is not accepted without executed evidence.
-- **Security retention and quick escalation:** a security finding stays open across re-checks until resolved, and a quick-mode run that touches a security surface escalates instead of passing.
+- **Security retention and quick escalation:** at the panel bound a triggered security role is never the one omitted (it displaces the lowest-risk triggered specialist), and a quick-mode run with a security trigger or a high or critical surface escalates to `panel`.
+- **Unresolved findings stay open:** a prior finding re-confirmed `unresolved` is re-emitted with its original id, claim, location and severity; prior `OPTIONAL` findings carry forward as notes.
 - **Plan and document targets**, and a `verified_state` field recording what exactly was verified.
 - **Harness layers, state guard and guards:** the harness scores in layers, guards against a changed source state, and adds checks for the new report fields.
 - **16 new fixtures** (28 in total) covering the above.
@@ -72,7 +78,8 @@ First tagged release: the verify skill as a portable Agent Skill, with a validat
 - **Eval harness** (`scripts/eval_harness.py`) with nine behavioral fixtures, unit tests and a GitHub Actions validation workflow.
 - **Docs:** README, architecture, installation and evaluation, plus the first recorded run.
 
-[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Gamebreack/agent-verification/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Gamebreack/agent-verification/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Gamebreack/agent-verification/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Gamebreack/agent-verification/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Gamebreack/agent-verification/compare/v0.1.0...v0.2.0
